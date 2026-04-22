@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prepzo — Features & Pricing Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #1E3A8A;
+    --primary-dark: #162D6B;
+    --accent: #4F46E5;
+    --surface: #F8FAFF;
+    --border: #E2E8F0;
+    --text: #0F172A;
+    --muted: #64748B;
+    --success: #16A34A;
+    --warning: #D97706;
+    --radius: 14px;
+    --shadow-card: 0 2px 16px rgba(30,58,138,0.07), 0 1px 4px rgba(30,58,138,0.04);
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #fff;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── SECTION WRAPPER ── */
+  section {
+    padding: 80px 24px;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .section-label {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .section-label h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.15;
+  }
+  .section-label p {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ════════════════════════════════════════
+     FEATURES SECTION
+  ════════════════════════════════════════ */
+  #features {
+    background: #fff;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 8px;
+  }
+  .feature-card {
+    padding: 28px 24px;
+    border-radius: var(--radius);
+    transition: background 150ms ease, transform 150ms ease;
+    cursor: default;
+  }
+  .feature-card:hover {
+    background: var(--surface);
+    transform: translateY(-2px);
+  }
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    background: #DBEAFE;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--primary);
+  }
+  .feature-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--primary);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .feature-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .feature-card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ════════════════════════════════════════
+     PRICING SECTION
+  ════════════════════════════════════════ */
+  #pricing {
+    background: var(--surface);
+  }
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  @media (max-width: 600px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+  }
+
+  /* FREE CARD */
+  .plan-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: 28px;
+  }
+  .plan-card.pro {
+    background: var(--primary);
+    border: none;
+    box-shadow: 0 8px 40px rgba(30,58,138,0.30);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* badge */
+  .best-value {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--warning);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 99px;
+    text-transform: uppercase;
+  }
+
+  .plan-name {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .plan-card .plan-name { color: var(--text); }
+  .plan-card.pro .plan-name { color: #fff; }
+
+  .plan-price {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .plan-price .amount {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .plan-card .amount { color: var(--text); }
+  .plan-card.pro .amount { color: #fff; }
+  .plan-price .period {
+    font-size: 14px;
+    padding-bottom: 4px;
+  }
+  .plan-card .period { color: var(--muted); }
+  .plan-card.pro .period { color: rgba(255,255,255,0.65); }
+
+  .plan-note {
+    font-size: 12px;
+    margin-bottom: 24px;
+    min-height: 18px;
+  }
+  .plan-card .plan-note { color: var(--muted); }
+  .plan-card.pro .plan-note { color: rgba(255,255,255,0.55); }
+
+  .feature-list {
+    list-style: none;
+    margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 14px;
+  }
+  .plan-card .feature-list li { color: var(--text); }
+  .plan-card.pro .feature-list li { color: #fff; }
+
+  .check-icon {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    margin-top: 2px;
+  }
+  .plan-card .check-icon { color: var(--muted); }
+  .plan-card.pro .check-icon { color: #4ADE80; }
+
+  /* BUTTONS */
+  .plan-btn {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    transition: all 150ms ease;
+    text-decoration: none;
+  }
+  .plan-card .plan-btn {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--primary);
+  }
+  .plan-card .plan-btn:hover { background: var(--surface); }
+  .plan-card.pro .plan-btn {
+    background: #fff;
+    color: var(--primary);
+  }
+  .plan-card.pro .plan-btn:hover { background: var(--surface); }
+
+  /* ── EDIT BAR (per section) ── */
+  .edit-bar {
+    margin-top: 48px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  .edit-bar h4 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #92400e;
+    margin-bottom: 14px;
+  }
+  .edit-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 1fr;
+    gap: 10px;
+    align-items: start;
+    border-bottom: 1px solid #fef3c7;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .edit-row:last-child { border-bottom: none; }
+  .edit-label { color: #78350f; font-weight: 600; }
+  .edit-current { color: #374151; }
+  .edit-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1.5px solid #fde68a;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #111;
+    outline: none;
+    resize: vertical;
+    min-height: 32px;
+  }
+  .edit-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+
+  /* ── HEADER BAR ── */
+  .page-header {
+    background: #1E3A8A;
+    color: #fff;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .page-header h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .page-header p { font-size: 13px; opacity: 0.7; }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="page-header">
+  <h1>Prepzo — Live Copy Preview</h1>
+  <p>Features section &amp; Pricing section · Edit the fields below each section · Share back for updates</p>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     FEATURES SECTION
+════════════════════════════════════════ -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">
+      <h2>Everything You Need to Top</h2>
+      <p>Built from the ground up for Indian competitive exam preparation.</p>
+    </div>
+
+    <div class="features-grid">
+
+      <!-- Feature 1 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Endless MCQs by Section</h3>
+        <p>Never run out of practice questions. Infinite questions for each subject, fetched in smart batches.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <h3>Spaced Repetition System</h3>
+        <p>Cards you get right resurface at the perfect time. The algorithm schedules reviews so you never forget.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>30-Second Countdown Timer</h3>
+        <p>Train under exam conditions with a live countdown ring. Build your speed section by section.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Speed Mode Flashcards</h3>
+        <p>Auto-advance every 5 seconds. Go through 50 concepts in 5 minutes.</p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </div>
+        <h3>Weak Topic Detection</h3>
+        <p>Automatic analysis surfaces topics where you score below 50%. Focus on what matters.</p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <h3>Mobile-First Design</h3>
+        <p>Swipe flashcards, tap options, track streaks — all on your phone. Study anywhere.</p>
+      </div>
+
+    </div>
+
+    <!-- EDIT PANEL — Features -->
+    <div class="edit-bar">
+      <h4>✏️ Edit features copy below</h4>
+
+      <div class="edit-row">
+        <div class="edit-label">Section heading</div>
+        <div class="edit-current">Everything You Need to Top</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Section subtext</div>
+        <div class="edit-current">Built from the ground up for Indian competitive exam preparation.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 1 — title</div>
+        <div class="edit-current">Endless MCQs by Section</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 1 — body</div>
+        <div class="edit-current">Never run out of practice questions. Infinite questions for each subject, fetched in smart batches.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 2 — title</div>
+        <div class="edit-current">Spaced Repetition System</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 2 — body</div>
+        <div class="edit-current">Cards you get right resurface at the perfect time. The algorithm schedules reviews so you never forget.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 3 — title</div>
+        <div class="edit-current">30-Second Countdown Timer</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 3 — body</div>
+        <div class="edit-current">Train under exam conditions with a live countdown ring. Build your speed section by section.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 4 — title</div>
+        <div class="edit-current">Speed Mode Flashcards</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 4 — body</div>
+        <div class="edit-current">Auto-advance every 5 seconds. Go through 50 concepts in 5 minutes.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 5 — title</div>
+        <div class="edit-current">Weak Topic Detection</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 5 — body</div>
+        <div class="edit-current">Automatic analysis surfaces topics where you score below 50%. Focus on what matters.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Feature 6 — title</div>
+        <div class="edit-current">Mobile-First Design</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Feature 6 — body</div>
+        <div class="edit-current">Swipe flashcards, tap options, track streaks — all on your phone. Study anywhere.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ════════════════════════════════════════
+     PRICING SECTION
+════════════════════════════════════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="section-label">
+      <h2>Simple, Honest Pricing</h2>
+      <p>Start free. Upgrade when you're ready.</p>
+    </div>
+
+    <div class="pricing-grid">
+
+      <!-- FREE -->
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">
+          <span class="amount">₹0</span>
+          <span class="period">/month</span>
+        </div>
+        <div class="plan-note">&nbsp;</div>
+        <ul class="feature-list">
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            15 MCQs per day
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            1 exam track
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Basic flashcards
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Progress tracking
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Recall deck
+          </li>
+        </ul>
+        <a href="#" class="plan-btn">Get Started Free</a>
+      </div>
+
+      <!-- PRO -->
+      <div class="plan-card pro">
+        <span class="best-value">BEST VALUE</span>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">
+          <span class="amount">₹99</span>
+          <span class="period">/month</span>
+        </div>
+        <div class="plan-note">Or ₹799/year — save 33%</div>
+        <ul class="feature-list">
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Unlimited MCQs every day
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            All 3 exams (JEE, NEET, CUET)
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Speed Mode flashcards
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Detailed analytics
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Weak topic detection
+          </li>
+          <li>
+            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Full progress history
+          </li>
+        </ul>
+        <a href="#" class="plan-btn">Start Free, Upgrade Anytime</a>
+      </div>
+
+    </div>
+
+    <!-- EDIT PANEL — Pricing -->
+    <div class="edit-bar">
+      <h4>✏️ Edit pricing copy below</h4>
+
+      <div class="edit-row">
+        <div class="edit-label">Section heading</div>
+        <div class="edit-current">Simple, Honest Pricing</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Section subtext</div>
+        <div class="edit-current">Start free. Upgrade when you're ready.</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Free — plan name</div>
+        <div class="edit-current">Free</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free — CTA button</div>
+        <div class="edit-current">Get Started Free</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free feature 1</div>
+        <div class="edit-current">15 MCQs per day</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free feature 2</div>
+        <div class="edit-current">1 exam track</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free feature 3</div>
+        <div class="edit-current">Basic flashcards</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free feature 4</div>
+        <div class="edit-current">Progress tracking</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Free feature 5</div>
+        <div class="edit-current">Recall deck</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+
+      <div class="edit-row">
+        <div class="edit-label">Pro — plan name</div>
+        <div class="edit-current">Pro</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro — badge</div>
+        <div class="edit-current">BEST VALUE</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro — price</div>
+        <div class="edit-current">₹99 /month</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro — yearly note</div>
+        <div class="edit-current">Or ₹799/year — save 33%</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 1</div>
+        <div class="edit-current">Unlimited MCQs every day</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 2</div>
+        <div class="edit-current">All 3 exams (JEE, NEET, CUET)</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 3</div>
+        <div class="edit-current">Speed Mode flashcards</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 4</div>
+        <div class="edit-current">Detailed analytics</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 5</div>
+        <div class="edit-current">Weak topic detection</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro feature 6</div>
+        <div class="edit-current">Full progress history</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+      <div class="edit-row">
+        <div class="edit-label">Pro — CTA button</div>
+        <div class="edit-current">Start Free, Upgrade Anytime</div>
+        <textarea class="edit-input" placeholder="Your version..."></textarea>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</body>
+</html>

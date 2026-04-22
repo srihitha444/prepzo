@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install ts-node --save-dev)"
+    ]
+  }
+}

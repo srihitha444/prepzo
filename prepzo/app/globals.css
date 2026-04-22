@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors */
+  --color-primary: #1E3A8A;
+  --color-primary-light: #3B5FBF;
+  --color-primary-dark: #162D6B;
+  --color-accent: #4F46E5;
+  --color-surface: #F8FAFF;
+  --color-border: #E2E8F0;
+  --color-text-primary: #0F172A;
+  --color-text-muted: #64748B;
+  --color-success: #16A34A;
+  --color-error: #DC2626;
+  --color-warning: #D97706;
+
+  /* Fonts */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-dm-sans), system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), monospace;
+
+  /* Border radius */
+  --radius-card: 14px;
+
+  /* Shadows */
+  --shadow-card: 0 2px 16px 0 rgba(30, 58, 138, 0.07), 0 1px 4px 0 rgba(30, 58, 138, 0.04);
+}
+
+:root,
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #0F172A;
+  --surface: #F8FAFF;
+  --card-bg: #ffffff;
+  --border-color: #E2E8F0;
+  --text-muted: #64748B;
+  --text-subtle: #94A3B8;
+  --sidebar-bg: #ffffff;
+  --input-bg: #ffffff;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  --surface: #1E293B;
+  --card-bg: #1E293B;
+  --border-color: #334155;
+  --text-muted: #94A3B8;
+  --text-subtle: #64748B;
+  --sidebar-bg: #1E293B;
+  --input-bg: #1E293B;
+  color-scheme: dark;
+}
+
+/* Dark mode structural overrides */
+[data-theme="dark"] body {
+  background: #0F172A;
+  color: #F1F5F9;
+}
+[data-theme="dark"] .min-h-screen {
+  background: #0F172A !important;
+}
+[data-theme="dark"] aside,
+[data-theme="dark"] header {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] nav.fixed {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .bg-white {
+  background: #1E293B !important;
+}
+[data-theme="dark"] .bg-\[\#F8FAFF\] {
+  background: #0F172A !important;
+}
+[data-theme="dark"] .border-\[\#E2E8F0\] {
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .text-\[\#0F172A\] {
+  color: #F1F5F9 !important;
+}
+[data-theme="dark"] .text-\[\#64748B\] {
+  color: #94A3B8 !important;
+}
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-width: 320px;
+}
+
+/* Smooth transitions */
+a, button, [role="button"] {
+  transition: all 150ms ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* 3D Flashcard flip */
+.card-flip-container {
+  perspective: 1000px;
+}
+.card-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+}
+
+/* Timer ring animation */
+@keyframes timer-countdown {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 163; }
+}
+
+/* Confetti animation */
+@keyframes confetti-fall {
+  0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Dot grid pattern for hero */
+.dot-grid {
+  background-image: radial-gradient(circle, #C7D2FE 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Safe area for iOS */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Tour overlay */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+.tour-overlay > * {
+  pointer-events: auto;
+}
