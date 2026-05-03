@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install ts-node --save-dev)"
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install ts-node --save-dev)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(timeout 15)"
     ]
   }
 }
