@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Production build
+.next
+out
+dist
+build
+
+# Development
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage
+.jest_cache
+cypress/videos
+cypress/screenshots
+
+# Documentation
+README.md
+docs
+CONTRIBUTING.md
+LICENSE
+
+# Development files
+docker-compose.override.yml
+Dockerfile.dev
+.env.development
+.env.test
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Logs
+logs
+*.log
