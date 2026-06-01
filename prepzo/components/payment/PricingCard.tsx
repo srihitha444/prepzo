@@ -38,7 +38,7 @@ export function PricingCard({
       }
 
       // Create order
-      const res = await fetch("/api/payment/create-order", {
+      const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -62,7 +62,7 @@ export function PricingCard({
         },
         theme: { color: "#1E3A8A" },
         handler: async (response: RazorpayPaymentResponse) => {
-          const verifyRes = await fetch("/api/payment/verify", {
+          const verifyRes = await fetch("/api/verify-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -76,12 +76,20 @@ export function PricingCard({
             toast.success("Payment successful! Welcome to Pro 🎉");
             window.location.href = "/dashboard";
           } else {
-            toast.error("Payment verification failed. Please contact support.");
+            toast.error(result.error || "Payment verification failed. Please contact support.");
           }
         },
         modal: {
-          ondismiss: () => setLoading(false),
+          ondismiss: () => {
+            setLoading(false);
+            toast.error("Payment cancelled.");
+          },
         },
+      });
+
+      rzp.on("payment.failed", (response) => {
+        setLoading(false);
+        toast.error(response.error?.description || "Payment failed. Please try again.");
       });
 
       rzp.open();

@@ -16,12 +16,22 @@ import type { Profile } from "@/lib/supabase/types";
 
 type QuizState = "setup" | "playing" | "finished";
 
+function getInitialQuizFilters() {
+  if (typeof window === "undefined") return { subject: "", topic: "" };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    subject: params.get("subject") || "",
+    topic: params.get("topic") || "",
+  };
+}
+
 export default function QuizPage() {
+  const initialFilters = getInitialQuizFilters();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [quizState, setQuizState] = useState<QuizState>("setup");
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("All");
+  const [selectedSubject, setSelectedSubject] = useState<string>(initialFilters.subject);
+  const [selectedTopic, setSelectedTopic] = useState<string>(initialFilters.topic);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
@@ -32,27 +42,50 @@ export default function QuizPage() {
     });
   }, []);
 
-  const subjects = profile?.exam ? getSubjectsForExam(profile.exam) : [];
+  const subjects = getSubjectsForExam(profile?.exam || "NEET");
 
   const quiz = useQuiz({
     userId: profile?.id || "",
-    exam: profile?.exam || "JEE",
+    exam: profile?.exam || "NEET",
     subject: selectedSubject || undefined,
-    difficulty: selectedDifficulty,
+    topic: selectedTopic || undefined,
     plan: profile?.plan || "free",
     dailyGoal: profile?.daily_goal,
   });
 
   useEffect(() => {
-    if (quiz.limitReached) setShowPaywall(true);
+    if (quiz.limitReached) {
+      const timer = setTimeout(() => setShowPaywall(true), 0);
+      return () => clearTimeout(timer);
+    }
   }, [quiz.limitReached]);
 
   useEffect(() => {
     if (quiz.goalReached && quizState === "playing") {
-      quiz.endSession();
-      setQuizState("finished");
+      const timer = setTimeout(() => {
+        quiz.endSession();
+        setQuizState("finished");
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [quiz.goalReached]); // eslint-disable-line
+
+  useEffect(() => {
+    if (quiz.sessionEnded && quizState === "playing") {
+      const timer = setTimeout(() => setQuizState("finished"), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [quiz.sessionEnded, quizState]);
+
+  useEffect(() => {
+    if (quizState === "playing" && !quiz.loading && !quiz.question) {
+      const timer = setTimeout(() => {
+        quiz.endSession();
+        setQuizState("finished");
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [quizState, quiz.loading, quiz.question]); // eslint-disable-line
 
   function startQuiz() {
     setQuizState("playing");
@@ -88,7 +121,10 @@ export default function QuizPage() {
           <p className="text-sm font-semibold text-[#0F172A] mb-3">Select Subject</p>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setSelectedSubject("")}
+              onClick={() => {
+                setSelectedSubject("");
+                setSelectedTopic("");
+              }}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
                 !selectedSubject ? "bg-[#1E3A8A] text-white" : "bg-[#F8FAFF] border border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"
               }`}
@@ -107,7 +143,10 @@ export default function QuizPage() {
               ) : (
                 <button
                   key={subject}
-                  onClick={() => setSelectedSubject(subject)}
+                  onClick={() => {
+                    setSelectedSubject(subject);
+                    setSelectedTopic("");
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
                     selectedSubject === subject ? "bg-[#1E3A8A] text-white" : "bg-[#F8FAFF] border border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"
                   }`}
@@ -124,23 +163,14 @@ export default function QuizPage() {
           )}
         </div>
 
-        {/* Difficulty selector */}
-        <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-[var(--shadow-card)] p-5 mb-6">
-          <p className="text-sm font-semibold text-[#0F172A] mb-3">Difficulty</p>
-          <div className="flex gap-2">
-            {["All", "Easy", "Medium", "Hard"].map((d) => (
-              <button
-                key={d}
-                onClick={() => setSelectedDifficulty(d)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
-                  selectedDifficulty === d ? "bg-[#1E3A8A] text-white" : "bg-[#F8FAFF] border border-[#E2E8F0] text-[#64748B]"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
+        {selectedTopic && (
+          <div className="bg-[#F8FAFF] border border-[#E2E8F0] rounded-xl p-4 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Targeted practice</p>
+            <p className="mt-1 text-sm font-semibold text-[#0F172A]">
+              {selectedSubject} · {selectedTopic}
+            </p>
           </div>
-        </div>
+        )}
 
         {profile?.plan === "free" && (
           <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-xl p-4 mb-6">
@@ -171,7 +201,7 @@ export default function QuizPage() {
           stats={quiz.stats}
           answers={quiz.answers}
           questions={quiz.questions}
-          exam={profile?.exam || "JEE"}
+          exam={profile?.exam || "NEET"}
           plan={profile?.plan || "free"}
           goalReached={quiz.goalReached}
           onRestart={restartQuiz}
@@ -189,16 +219,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!quiz.question) {
-    return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto text-center py-16">
-        <p className="text-[#64748B] text-lg mb-4">No questions found for this selection.</p>
-        <button onClick={restartQuiz} className="px-6 py-3 rounded-xl bg-[#1E3A8A] text-white font-semibold">
-          Go Back
-        </button>
-      </div>
-    );
-  }
+  if (!quiz.question) return null;
 
   const { question, selectedOption, answered, timeLeft, stats } = quiz;
   const options = [
@@ -211,16 +232,20 @@ export default function QuizPage() {
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <Badge variant="primary">{profile?.exam} · {selectedSubject || "All"}</Badge>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-[#16A34A] font-semibold">✓ {stats.correct}</span>
-            <span className="text-[#DC2626] font-semibold">✗ {stats.wrong}</span>
-            <span className="text-[#64748B]">{stats.accuracy}%</span>
+      <div className="flex flex-col gap-3 mb-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+          <Badge variant="primary">{profile?.exam} · {selectedTopic || selectedSubject || "All"}</Badge>
+          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+            <span>Q {quiz.currentIndex + 1} of {quiz.questions.length}</span>
+            <span>• {Math.max(quiz.questions.length - quiz.currentIndex - 1, 0)} left</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-[#16A34A] font-semibold">✓ {stats.correct}</span>
+            <span className="text-[#DC2626] font-semibold">✗ {stats.wrong}</span>
+            <span>{stats.accuracy}%</span>
+          </div>
           <TimerRing timeLeft={timeLeft} total={30} size={48} />
           <button
             onClick={endSession}
@@ -236,11 +261,6 @@ export default function QuizPage() {
       <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-[var(--shadow-card)] p-5 mb-4">
         <div className="flex items-center gap-2 mb-3">
           {question.topic && <Badge variant="muted">{question.topic}</Badge>}
-          {question.difficulty && (
-            <Badge variant={question.difficulty === "Easy" ? "success" : question.difficulty === "Hard" ? "error" : "warning"}>
-              {question.difficulty}
-            </Badge>
-          )}
         </div>
         <p className="text-[#0F172A] font-medium leading-relaxed text-base">
           {question.question_text}
@@ -288,7 +308,7 @@ export default function QuizPage() {
           onClick={quiz.nextQuestion}
           className="w-full py-3.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white font-semibold transition-all flex items-center justify-center gap-2"
         >
-          Next Question <ChevronRight size={16} />
+          {quiz.currentIndex >= quiz.questions.length - 1 ? "Complete Session" : "Next Question"} <ChevronRight size={16} />
         </button>
       )}
 

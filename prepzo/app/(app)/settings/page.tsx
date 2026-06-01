@@ -9,6 +9,7 @@ import {
   Check, Shield, Bell, Save, Crown,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import toast from "react-hot-toast";
 import type { Profile } from "@/lib/supabase/types";
 
@@ -16,32 +17,77 @@ type Section = "account" | "study" | "practice" | "subscription" | "help";
 type Theme = "light" | "dark" | "system";
 
 interface Prefs {
+  mcqDailyGoal: number;
   mcqTimer: number;
+  mcqRecallFrequency: string;
   recallFrequency: string;
+  flashcardGoal: number;
+  flashcardRecallFrequency: string;
   speedModeInterval: number;
   difficulty: string;
   showExplanation: string;
   randomizeOrder: boolean;
   autoAdvance: boolean;
   weakTopicThreshold: number;
+  weakTopicMinAttempts: number;
   newCardsPerDay: number;
   studyMode: string;
   theme: Theme;
 }
 
 const DEFAULT_PREFS: Prefs = {
+  mcqDailyGoal: 15,
   mcqTimer: 30,
+  mcqRecallFrequency: "daily",
   recallFrequency: "daily",
+  flashcardGoal: 5,
+  flashcardRecallFrequency: "daily",
   speedModeInterval: 5,
   difficulty: "mixed",
   showExplanation: "immediate",
   randomizeOrder: true,
   autoAdvance: true,
   weakTopicThreshold: 60,
-  newCardsPerDay: 20,
+  weakTopicMinAttempts: 5,
+  newCardsPerDay: 5,
   studyMode: "mixed",
   theme: "system",
 };
+
+function getInitialPrefs(): Prefs {
+  if (typeof window === "undefined") return DEFAULT_PREFS;
+  const saved = localStorage.getItem("prepzo_prefs");
+  if (!saved) return DEFAULT_PREFS;
+
+  try {
+    const parsed = JSON.parse(saved);
+    return {
+      ...DEFAULT_PREFS,
+      ...parsed,
+      mcqDailyGoal: parsed.mcqDailyGoal || DEFAULT_PREFS.mcqDailyGoal,
+      mcqRecallFrequency: parsed.mcqRecallFrequency || parsed.recallFrequency || DEFAULT_PREFS.mcqRecallFrequency,
+      flashcardGoal: parsed.flashcardGoal || parsed.newCardsPerDay || DEFAULT_PREFS.flashcardGoal,
+      flashcardRecallFrequency:
+        parsed.flashcardRecallFrequency || parsed.recallFrequency || DEFAULT_PREFS.flashcardRecallFrequency,
+      newCardsPerDay: parsed.newCardsPerDay || parsed.flashcardGoal || DEFAULT_PREFS.newCardsPerDay,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+function clampFreePrefs(prefs: Prefs): Prefs {
+  return {
+    ...prefs,
+    mcqDailyGoal: Math.min(prefs.mcqDailyGoal || DEFAULT_PREFS.mcqDailyGoal, 15),
+    flashcardGoal: Math.min(prefs.flashcardGoal || DEFAULT_PREFS.flashcardGoal, 5),
+    newCardsPerDay: Math.min(prefs.newCardsPerDay || DEFAULT_PREFS.newCardsPerDay, 5),
+  };
+}
+
+function getCombinedGoal(prefs: Prefs): number {
+  return (prefs.mcqDailyGoal || DEFAULT_PREFS.mcqDailyGoal) + (prefs.flashcardGoal || DEFAULT_PREFS.flashcardGoal);
+}
 
 const NAV = [
   { id: "account" as Section, label: "Account & Profile", icon: User },
@@ -55,7 +101,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<Section>("account");
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState<Prefs>(getInitialPrefs);
 
   // Pending (unsaved) state for each section
   const [pendingStudy, setPendingStudy] = useState<Partial<Prefs>>({});
@@ -65,9 +111,10 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [premiumFeature, setPremiumFeature] = useState("Prepzo Pro");
 
   const [name, setName] = useState("");
-  const [exam, setExam] = useState("");
   const [dailyGoal, setDailyGoal] = useState(20);
 
   useEffect(() => {
@@ -76,25 +123,48 @@ export default function SettingsPage() {
       if (data) {
         setProfile(data);
         setName(data.name || "");
-        setExam(data.exam || "");
         setDailyGoal(data.daily_goal || 20);
+        if (data.plan !== "paid") {
+          setPrefs((current) => {
+            const next = clampFreePrefs(current);
+            localStorage.setItem("prepzo_prefs", JSON.stringify(next));
+            return next;
+          });
+        }
       }
     });
-    const saved = localStorage.getItem("prepzo_prefs");
-    if (saved) {
-      try { setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(saved) }); } catch {}
-    }
   }, []);
 
   // Merge pending into saved prefs
   const studyPrefs = { ...prefs, ...pendingStudy };
   const practicePrefs = { ...prefs, ...pendingPractice };
 
-  function saveSection(section: "study" | "practice") {
+  function openPremiumModal(feature: string) {
+    setPremiumFeature(feature);
+    setPremiumModalOpen(true);
+  }
+
+  async function saveSection(section: "study" | "practice") {
     const updates = section === "study" ? pendingStudy : pendingPractice;
-    const next = { ...prefs, ...updates };
+    let next = { ...prefs, ...updates };
+    if (profile?.plan !== "paid") next = clampFreePrefs(next);
     setPrefs(next);
     localStorage.setItem("prepzo_prefs", JSON.stringify(next));
+
+    if (section === "study" && profile) {
+      const combinedGoal = getCombinedGoal(next);
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({ daily_goal: combinedGoal })
+        .eq("id", profile.id);
+      if (error) {
+        toast.error("Failed to save daily goal");
+        return;
+      }
+      setDailyGoal(combinedGoal);
+    }
+
     if (section === "study") { setPendingStudy({}); setStudyDirty(false); }
     else { setPendingPractice({}); setPracticeDirty(false); }
     toast.success("Settings saved — applies to your next session");
@@ -125,7 +195,7 @@ export default function SettingsPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ name, exam: exam as "JEE" | "NEET" | "CUET", daily_goal: dailyGoal })
+      .update({ name, exam: "NEET", daily_goal: dailyGoal })
       .eq("id", profile.id);
     setLoading(false);
     if (error) { toast.error("Failed to save profile"); return; }
@@ -214,32 +284,8 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#374151] mb-1">Target Exam</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {["JEE", "NEET", "CUET"].map((e) => (
-                        <button key={e} onClick={() => setExam(e)}
-                          className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${exam === e ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
-                          {e}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#374151] mb-1">Daily MCQ Goal</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[10, 20, 30].map((g) => {
-                        const isPro = g === 30 && profile?.plan !== "paid";
-                        return isPro ? (
-                          <a key={g} href="/upgrade"
-                            className="py-2.5 rounded-xl border-2 border-[#E2E8F0] text-xs font-semibold text-[#94A3B8] flex items-center justify-center gap-1">
-                            <Crown size={11} className="text-[#D97706]" /> 30 / day
-                          </a>
-                        ) : (
-                          <button key={g} onClick={() => setDailyGoal(g)}
-                            className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${dailyGoal === g ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
-                            {g} / day
-                          </button>
-                        );
-                      })}
+                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] px-4 py-3 text-sm font-semibold text-[#0F172A]">
+                      NEET
                     </div>
                   </div>
                   <button onClick={saveProfile} disabled={loading}
@@ -300,11 +346,34 @@ export default function SettingsPage() {
           {activeSection === "study" && (
             <>
               <Card>
-                <h2 className="text-base font-bold text-[#0F172A] mb-5">Preferred Study Mode</h2>
+                <h2 className="text-base font-bold text-[#0F172A] mb-1">Daily MCQ Goal</h2>
+                <p className="text-xs text-[#64748B] mb-4">Questions you want to complete each day.</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[10, 15, 20, 30].map((g) => {
+                    const isPro = g > 15 && profile?.plan !== "paid";
+                    return (
+                      <button key={g} onClick={() => isPro ? openPremiumModal(`${g} MCQs per day`) : updateStudy({ mcqDailyGoal: g })}
+                        className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all flex items-center justify-center gap-1 ${
+                          studyPrefs.mcqDailyGoal === g
+                            ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]"
+                            : isPro
+                              ? "border-[#E2E8F0] text-[#94A3B8] hover:border-[#F59E0B]"
+                              : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"
+                        }`}>
+                        {isPro && <Crown size={12} className="text-[#D97706]" />} {g}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card>
+                <h2 className="text-base font-bold text-[#0F172A] mb-1">MCQ Recall Frequency</h2>
+                <p className="text-xs text-[#64748B] mb-4">How often MCQ recall reviews appear.</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {[{ value: "flashcards", label: "Flashcards first" }, { value: "mcq", label: "MCQ first" }, { value: "mixed", label: "Mixed" }].map(({ value, label }) => (
-                    <button key={value} onClick={() => updateStudy({ studyMode: value })}
-                      className={`py-3 px-2 rounded-xl border-2 text-xs font-semibold transition-all ${studyPrefs.studyMode === value ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
+                  {[{ value: "daily", label: "Every day" }, { value: "every2days", label: "Every 2 days" }, { value: "weekly", label: "Weekly" }].map(({ value, label }) => (
+                    <button key={value} onClick={() => updateStudy({ mcqRecallFrequency: value, recallFrequency: value })}
+                      className={`py-3 px-2 rounded-xl border-2 text-xs font-semibold transition-all ${studyPrefs.mcqRecallFrequency === value ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
                       {label}
                     </button>
                   ))}
@@ -325,26 +394,49 @@ export default function SettingsPage() {
               </Card>
 
               <Card>
-                <h2 className="text-base font-bold text-[#0F172A] mb-1">Recall Review Frequency</h2>
-                <p className="text-xs text-[#64748B] mb-4">How often due recall cards appear in your session.</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[{ value: "daily", label: "Every day" }, { value: "every2days", label: "Every 2 days" }, { value: "weekly", label: "Weekly" }].map(({ value, label }) => (
-                    <button key={value} onClick={() => updateStudy({ recallFrequency: value })}
-                      className={`py-3 px-2 rounded-xl border-2 text-xs font-semibold transition-all ${studyPrefs.recallFrequency === value ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
-                      {label}
+                <h2 className="text-base font-bold text-[#0F172A] mb-1">Weak Topic Attempts</h2>
+                <p className="text-xs text-[#64748B] mb-4">Minimum attempts before a topic can be flagged as weak.</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[3, 5, 10, 15].map((v) => (
+                    <button key={v} onClick={() => updateStudy({ weakTopicMinAttempts: v })}
+                      className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${studyPrefs.weakTopicMinAttempts === v ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
+                      {v}
                     </button>
                   ))}
                 </div>
               </Card>
 
               <Card>
-                <h2 className="text-base font-bold text-[#0F172A] mb-1">New Cards per Day</h2>
+                <h2 className="text-base font-bold text-[#0F172A] mb-1">Daily Flashcard Goal</h2>
                 <p className="text-xs text-[#64748B] mb-4">Max new flashcards introduced in a single session.</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {[10, 15, 20, 30].map((v) => (
-                    <button key={v} onClick={() => updateStudy({ newCardsPerDay: v })}
-                      className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${studyPrefs.newCardsPerDay === v ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
-                      {v}
+                <div className="grid grid-cols-2 gap-2">
+                  {[5, 10].map((v) => {
+                    const isPro = v === 10 && profile?.plan !== "paid";
+                    return (
+                      <button key={v} onClick={() => isPro ? openPremiumModal(`${v} flashcards per day`) : updateStudy({ flashcardGoal: v, newCardsPerDay: v })}
+                        className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all flex items-center justify-center gap-1 ${
+                          studyPrefs.flashcardGoal === v
+                            ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]"
+                            : isPro
+                              ? "border-[#E2E8F0] text-[#94A3B8] hover:border-[#F59E0B]"
+                              : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"
+                        }`}>
+                        {isPro && <Crown size={12} className="text-[#D97706]" />}
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card>
+                <h2 className="text-base font-bold text-[#0F172A] mb-1">Flashcard Recall Frequency</h2>
+                <p className="text-xs text-[#64748B] mb-4">How often flashcard recall reviews appear.</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ value: "daily", label: "Every day" }, { value: "every2days", label: "Every 2 days" }, { value: "weekly", label: "Weekly" }].map(({ value, label }) => (
+                    <button key={value} onClick={() => updateStudy({ flashcardRecallFrequency: value })}
+                      className={`py-3 px-2 rounded-xl border-2 text-xs font-semibold transition-all ${studyPrefs.flashcardRecallFrequency === value ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -384,9 +476,9 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-xs text-[#64748B] mb-4">How long each flashcard shows before moving on.</p>
                 {profile?.plan !== "paid" ? (
-                  <a href="/upgrade" className="flex items-center gap-2 text-sm text-[#1E3A8A] font-semibold underline">
+                  <button onClick={() => openPremiumModal("Speed Mode auto-advance")} className="flex items-center gap-2 text-sm text-[#1E3A8A] font-semibold underline">
                     <Crown size={14} className="text-[#D97706]" /> Upgrade to unlock Speed Mode
-                  </a>
+                  </button>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {[3, 5, 7].map((s) => (
@@ -426,7 +518,7 @@ export default function SettingsPage() {
                       checked={practicePrefs.autoAdvance}
                       onChange={(v) => updatePractice({ autoAdvance: v })} />
                   ) : (
-                    <div className="flex items-center justify-between gap-4 opacity-50">
+                    <button onClick={() => openPremiumModal("Speed Mode auto-advance")} className="flex items-center justify-between gap-4 opacity-50 text-left w-full">
                       <div>
                         <p className="text-sm font-medium text-[#0F172A] flex items-center gap-1.5">
                           <Crown size={12} className="text-[#D97706]" /> Speed Mode auto-advance
@@ -436,7 +528,7 @@ export default function SettingsPage() {
                       <div className="w-11 h-6 rounded-full bg-[#E2E8F0] relative shrink-0 cursor-not-allowed">
                         <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow" />
                       </div>
-                    </div>
+                    </button>
                   )}
                 </div>
               </Card>
@@ -466,7 +558,7 @@ export default function SettingsPage() {
                   <p className={`text-sm mt-1 ${profile?.plan === "paid" ? "text-white/70" : "text-[#64748B]"}`}>
                     {profile?.plan === "paid"
                       ? "You have full access to all Prepzo features."
-                      : "15 MCQs/day · 1 exam track · Basic features"}
+                      : "15 MCQs/day · NEET track · Basic features"}
                   </p>
                 </div>
                 {profile?.plan !== "paid" && (
@@ -511,6 +603,33 @@ export default function SettingsPage() {
 
         </div>
       </div>
+
+      <Modal open={premiumModalOpen} onClose={() => setPremiumModalOpen(false)} title="Available on Pro">
+        <div className="space-y-4">
+          <div className="rounded-xl bg-[#FEF3C7] border border-[#FDE68A] p-4">
+            <div className="flex items-center gap-2 text-[#D97706] font-semibold text-sm">
+              <Crown size={16} /> {premiumFeature}
+            </div>
+            <p className="text-xs text-[#92400E] mt-2">
+              This is a premium feature. Your current plan can use 15 MCQs per day, 5 flashcards per day, all weak topic thresholds, and standard quiz controls.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setPremiumModalOpen(false)}
+              className="py-2.5 rounded-xl border border-[#E2E8F0] text-sm font-semibold text-[#64748B] hover:bg-[#F8FAFF] transition-all"
+            >
+              Keep Free Plan
+            </button>
+            <a
+              href="/upgrade"
+              className="py-2.5 rounded-xl bg-[#1E3A8A] text-sm font-semibold text-white text-center hover:bg-[#162D6B] transition-all"
+            >
+              View Pro
+            </a>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -104,9 +104,17 @@ export default function DecksPage() {
     setLoading(false);
   }
 
+  function startReviewAt(index: number) {
+    setReviewIndex(index);
+    setSelectedOption(null);
+    setAnswered(false);
+    setFlipped(false);
+    setResults({ correct: 0, wrong: 0 });
+    setReviewing(true);
+  }
+
   function startReview() {
-    setReviewIndex(0); setSelectedOption(null); setAnswered(false);
-    setFlipped(false); setResults({ correct: 0, wrong: 0 }); setReviewing(true);
+    startReviewAt(0);
   }
 
   function exitReview() { setReviewing(false); loadItems(); }
@@ -241,7 +249,7 @@ export default function DecksPage() {
         ) : (
           <>
             <FlashCard
-              card={{ id: item.flashcardId, exam: "JEE", subject: item.subject, topic: item.topic,
+              card={{ id: item.flashcardId, exam: "NEET", subject: item.subject, topic: item.topic,
                 front_text: item.front_text, back_text: item.back_text, is_active: true, created_at: "" } as Flashcard}
               flipped={flipped}
               onFlip={() => setFlipped((f) => !f)}
@@ -356,10 +364,14 @@ export default function DecksPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const isDue = !item.next_due_at || new Date(item.next_due_at) <= new Date();
             return (
-              <Card key={item.id} className="flex items-start gap-3">
+              <Card
+                key={item.id}
+                onClick={() => startReviewAt(index)}
+                className="flex items-start gap-3 cursor-pointer hover:border-[#1E3A8A] transition-all"
+              >
                 <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${item.kind === "mcq" ? "bg-[#DBEAFE]" : "bg-[#F3E8FF]"}`}>
                   {item.kind === "mcq" ? <Brain size={14} className="text-[#1E3A8A]" /> : <BookOpen size={14} className="text-[#7C3AED]" />}
                 </div>

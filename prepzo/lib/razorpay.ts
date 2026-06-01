@@ -4,9 +4,13 @@ let _razorpay: Razorpay | null = null;
 
 export function getRazorpay(): Razorpay {
   if (!_razorpay) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error("Missing Razorpay credentials");
+    }
+
     _razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
   }
   return _razorpay;
@@ -57,6 +61,7 @@ export interface RazorpayPaymentResponse {
 interface RazorpayInstance {
   open(): void;
   close(): void;
+  on(event: "payment.failed", handler: (response: { error?: { description?: string } }) => void): void;
 }
 
 export function loadRazorpayScript(): Promise<boolean> {

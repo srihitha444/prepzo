@@ -22,8 +22,12 @@ export default async function AppLayout({
     .eq("id", user.id)
     .single();
 
+  if (!profile?.exam) {
+    redirect("/onboarding");
+  }
+
   return (
-    <div className="min-h-screen bg-[#F8FAFF]">
+    <div className="min-h-screen bg-[var(--surface)]">
       <Sidebar profile={profile} />
       <TopBar profile={profile} />
       <main className="md:ml-60 pb-20 md:pb-0 min-h-screen">

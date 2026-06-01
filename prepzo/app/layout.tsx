@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, DM_Sans, DM_Mono } from "next/font/google";
+import { Fraunces, DM_Mono, DM_Sans } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
@@ -24,13 +24,13 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prepzo — Crack Every Exam.",
+  title: "Prepzo - NEET Prep",
   description:
-    "Smart flashcards, timed MCQs, and spaced repetition — built for Indian exam toppers. Prepare for JEE, NEET & CUET.",
-  keywords: ["JEE preparation", "NEET preparation", "CUET preparation", "exam prep India"],
+    "The smartest way to prep for NEET with smart flashcards, timed MCQs, and spaced repetition.",
+  keywords: ["NEET preparation", "NEET exam", "NEET MCQs", "exam prep India"],
   openGraph: {
-    title: "Prepzo — Crack Every Exam.",
-    description: "Smart flashcards, timed MCQs for JEE, NEET & CUET.",
+    title: "Prepzo - NEET Prep",
+    description: "Smart flashcards and timed MCQs for NEET aspirants.",
     type: "website",
   },
 };
@@ -45,7 +45,7 @@ export default function RootLayout({
       lang="en"
       className={`${fraunces.variable} ${dmSans.variable} ${dmMono.variable} h-full`}
     >
-      <body className="min-h-full bg-white text-[#0F172A] antialiased">
+      <body className="min-h-full bg-[var(--background)] text-[var(--foreground)] antialiased">
         <ThemeProvider />
         {children}
         <Toaster

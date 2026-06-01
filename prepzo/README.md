@@ -1,6 +1,6 @@
 # Prepzo — Crack Every Exam.
 
-> Smart flashcards, timed MCQs, and spaced repetition for JEE, NEET & CUET.
+> Smart flashcards, timed MCQs, and spaced repetition for NEET.
 
 **Tech Stack:** Next.js 16 · TypeScript · Tailwind CSS v4 · Supabase · Razorpay
 
@@ -53,7 +53,7 @@ ADMIN_EMAILS=admin@yoursite.com
 npm run seed
 ```
 
-This inserts ~100 questions and flashcards across JEE, NEET, and CUET.
+This inserts ~100 questions and flashcards for NEET.
 
 ### 5. Run Development Server
 
@@ -139,7 +139,7 @@ prepzo/
 | Feature | Free | Pro (₹99/mo) |
 |---------|------|--------------|
 | Daily MCQs | 15/day | Unlimited |
-| Exams | 1 | JEE + NEET + CUET |
+| Exams | 1 | NEET |
 | Flashcards | Basic | Speed Mode |
 | Analytics | Basic | Full |
 | Weak topic detection | — | ✓ |
@@ -148,7 +148,7 @@ prepzo/
 - **Infinite Questions**: Fetched in batches of 20, prefetched when 5 remain
 - **Spaced Repetition**: Cards resurface based on correctness history
 - **30-second Timer**: SVG ring animation per question
-- **Negative Marking**: -1/3 for JEE/NEET, -0.25 for CUET
+- **Negative Marking**: -1/3 for NEET
 - **3D Flashcard Flip**: CSS transform rotateY animation
 - **Swipe Gestures**: Touch events for mobile flashcard navigation
 - **Product Tour**: Custom tooltip overlay after onboarding

@@ -1,4 +1,4 @@
-export type Exam = "JEE" | "NEET" | "CUET";
+export type Exam = "NEET";
 export type Plan = "free" | "paid";
 export type DeckType = "unseen" | "recall" | "review";
 export type Difficulty = "Easy" | "Medium" | "Hard";

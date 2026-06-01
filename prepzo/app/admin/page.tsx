@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -16,11 +16,11 @@ export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterExam, setFilterExam] = useState("JEE");
+  const [filterExam, setFilterExam] = useState("NEET");
   const [analytics, setAnalytics] = useState({ users: 0, paid: 0, revenue: 0 });
 
   const [form, setForm] = useState({
-    exam: "JEE",
+    exam: "NEET",
     subject: "",
     topic: "",
     question_text: "",
@@ -33,20 +33,23 @@ export default function AdminPage() {
     difficulty: "Medium",
   });
 
-  useEffect(() => {
-    checkAdmin();
-  }, []);
-
-  async function checkAdmin() {
+  const checkAdmin = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setAuthorized(false); return; }
 
     const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim());
     setAuthorized(!!(adminEmails.includes(user.email || "") || user.email?.includes("admin")));
-  }
+  }, []);
 
-  async function loadQuestions() {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void checkAdmin();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [checkAdmin]);
+
+  const loadQuestions = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     let query = supabase.from("questions").select("*").eq("exam", filterExam).order("created_at", { ascending: false }).limit(50);
@@ -54,23 +57,26 @@ export default function AdminPage() {
     const { data } = await query;
     setQuestions(data || []);
     setLoading(false);
-  }
+  }, [filterExam, search]);
 
-  async function loadAnalytics() {
+  const loadAnalytics = useCallback(async () => {
     const supabase = createClient();
     const { count: users } = await supabase.from("profiles").select("*", { count: "exact", head: true });
     const { count: paid } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("plan", "paid");
     const { data: subs } = await supabase.from("subscriptions").select("amount").eq("status", "active");
     const revenue = (subs || []).reduce((s: number, sub: { amount: number | null }) => s + (sub.amount || 0), 0);
     setAnalytics({ users: users || 0, paid: paid || 0, revenue: revenue / 100 });
-  }
+  }, []);
 
   useEffect(() => {
     if (authorized) {
-      loadQuestions();
-      loadAnalytics();
+      const timer = window.setTimeout(() => {
+        void loadQuestions();
+        void loadAnalytics();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
-  }, [authorized, filterExam]); // eslint-disable-line
+  }, [authorized, loadQuestions, loadAnalytics]);
 
   async function handleAddQuestion(e: React.FormEvent) {
     e.preventDefault();
@@ -86,7 +92,7 @@ export default function AdminPage() {
       return;
     }
     toast.success("Question added!");
-    setForm({ exam: "JEE", subject: "", topic: "", question_text: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "A", explanation: "", difficulty: "Medium" });
+    setForm({ exam: "NEET", subject: "", topic: "", question_text: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "A", explanation: "", difficulty: "Medium" });
     setActiveTab("questions");
     loadQuestions();
   }
@@ -105,8 +111,8 @@ export default function AdminPage() {
     const text = await file.text();
     const lines = text.split("\n").slice(1); // skip header
     const questions = lines.filter(Boolean).map((line) => {
-      const [exam, subject, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
-      return { exam, subject, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty, is_active: true };
+      const [, subject, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty] = line.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
+      return { exam: "NEET", subject, topic, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty, is_active: true };
     });
 
     const supabase = createClient();
@@ -217,7 +223,7 @@ export default function AdminPage() {
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A]"
                 />
               </div>
-              {["JEE", "NEET", "CUET"].map((exam) => (
+              {["NEET"].map((exam) => (
                 <button
                   key={exam}
                   onClick={() => setFilterExam(exam)}
@@ -280,7 +286,7 @@ export default function AdminPage() {
                 <div>
                   <label className="block text-xs font-medium text-[#64748B] mb-1">Exam</label>
                   <select value={form.exam} onChange={(e) => setForm({ ...form, exam: e.target.value })} className={inputClass}>
-                    <option>JEE</option><option>NEET</option><option>CUET</option>
+                    <option>NEET</option>
                   </select>
                 </div>
                 <div>

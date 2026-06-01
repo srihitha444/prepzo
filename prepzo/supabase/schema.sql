@@ -12,7 +12,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   name TEXT,
-  exam TEXT CHECK (exam IN ('JEE','NEET','CUET')),
+  exam TEXT CHECK (exam IN ('NEET')),
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','paid')),
   daily_goal INTEGER DEFAULT 20,
   streak INTEGER DEFAULT 0,
@@ -52,7 +52,7 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 -- =============================================
 CREATE TABLE IF NOT EXISTS questions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  exam TEXT NOT NULL CHECK (exam IN ('JEE','NEET','CUET')),
+  exam TEXT NOT NULL CHECK (exam IN ('NEET')),
   subject TEXT NOT NULL,
   topic TEXT,
   question_text TEXT NOT NULL,
@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_questions_active ON questions(is_active);
 -- =============================================
 CREATE TABLE IF NOT EXISTS flashcards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  exam TEXT NOT NULL CHECK (exam IN ('JEE','NEET','CUET')),
+  exam TEXT NOT NULL CHECK (exam IN ('NEET')),
   subject TEXT NOT NULL,
   topic TEXT,
   front_text TEXT NOT NULL,

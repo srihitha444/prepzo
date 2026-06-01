@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicPath = PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith("/auth/")
-  );
+  ) || pathname.startsWith("/api/");
   const isAdminPath = ADMIN_PATHS.some((p) => pathname.startsWith(p));
 
   if (!user && !isPublicPath) {

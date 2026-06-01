@@ -36,8 +36,8 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-    toast.success("Account created! Please check your email to confirm.");
-    router.push("/onboarding");
+    toast.success(`Confirmation email sent to ${email}. Please check your inbox and confirm your account.`);
+    router.push("/auth/login");
     router.refresh();
   }
 

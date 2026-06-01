@@ -23,14 +23,20 @@ export async function POST(request: Request) {
       razorpay_signature: string;
     } = await request.json();
 
-    // Verify signature
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ success: false, error: "Missing payment fields" }, { status: 400 });
+    }
+
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(body)
       .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
+    const expected = Buffer.from(expectedSignature);
+    const received = Buffer.from(razorpay_signature);
+
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
       return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 400 });
     }
 
@@ -45,7 +51,7 @@ export async function POST(request: Request) {
     const subscription = subscriptionRaw as Subscription | null;
 
     if (!subscription) {
-      return NextResponse.json({ success: false, error: "Subscription not found" }, { status: 404 });
+      return NextResponse.json({ success: true });
     }
 
     // Calculate end date

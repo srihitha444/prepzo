@@ -25,22 +25,14 @@ export function getAccuracyColor(accuracy: number): string {
 }
 
 export function getSubjectsForExam(exam: string): string[] {
-  switch (exam) {
-    case "JEE":
-      return ["Physics", "Chemistry", "Mathematics"];
-    case "NEET":
-      return ["Physics", "Chemistry", "Botany", "Zoology"];
-    case "CUET":
-      return ["Language", "Domain Subject", "General Test"];
-    default:
-      return [];
+  if (exam === "NEET") {
+    return ["Physics", "Chemistry", "Botany", "Zoology"];
   }
+  return [];
 }
 
-export function getNegativeMarking(exam: string): number {
-  if (exam === "JEE" || exam === "NEET") return 1 / 3;
-  if (exam === "CUET") return 0.25;
-  return 0;
+export function getNegativeMarking(): number {
+  return 1 / 3;
 }
 
 export function getDaysUntilDue(nextDueAt: string | null): number {
@@ -62,13 +54,9 @@ export function formatCurrency(paise: number): string {
 }
 
 export const EXAM_COLORS: Record<string, string> = {
-  JEE: "#1E3A8A",
   NEET: "#16A34A",
-  CUET: "#7C3AED",
 };
 
 export const EXAM_ICONS: Record<string, string> = {
-  JEE: "⚗️",
   NEET: "🧬",
-  CUET: "📚",
 };

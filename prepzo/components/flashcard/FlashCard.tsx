@@ -24,7 +24,7 @@ export function FlashCard({ card, flipped, onFlip }: FlashCardProps) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }); // eslint-disable-line
+  }, [onFlip]);
 
   return (
     <div

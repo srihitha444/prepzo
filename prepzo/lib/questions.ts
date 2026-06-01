@@ -3,17 +3,60 @@ import { getISTDate } from "./utils";
 import type { Question, UserProgress } from "./supabase/types";
 
 export const FREE_DAILY_LIMIT = 15;
+type RecallFrequency = "daily" | "every2days" | "weekly";
+
+function getRecallIntervals(frequency: RecallFrequency): Array<number | null> {
+  if (frequency === "weekly") return [7, null];
+  if (frequency === "every2days") return [2, 7, 7];
+  return [1, 3, 3];
+}
+
+function addDays(days: number): string {
+  const nextDue = new Date();
+  nextDue.setTime(nextDue.getTime() + days * 24 * 60 * 60 * 1000);
+  return nextDue.toISOString();
+}
+
+async function fetchQuestionsByIds(params: {
+  ids: string[];
+  exam: string;
+  subject?: string;
+  topic?: string;
+  difficulty?: string;
+}): Promise<Question[]> {
+  const { ids, exam, subject, topic, difficulty } = params;
+  if (ids.length === 0) return [];
+
+  const supabase = createClient();
+  let query = supabase
+    .from("questions")
+    .select("*")
+    .in("id", ids)
+    .eq("exam", exam)
+    .eq("is_active", true);
+
+  if (subject) query = query.eq("subject", subject);
+  if (topic) query = query.eq("topic", topic);
+  if (difficulty && difficulty !== "All") query = query.eq("difficulty", difficulty);
+
+  const { data } = await query;
+  const questions = (data || []) as Question[];
+  return ids
+    .map((id) => questions.find((question) => question.id === id))
+    .filter((question): question is Question => Boolean(question));
+}
 
 export async function fetchQuestions(params: {
   exam: string;
   subject?: string;
+  topic?: string;
   difficulty?: string;
   limit?: number;
   offset?: number;
   excludeIds?: string[];
 }): Promise<Question[]> {
   const supabase = createClient();
-  const { exam, subject, difficulty, limit = 20, offset = 0, excludeIds = [] } = params;
+  const { exam, subject, topic, difficulty, limit = 20, offset = 0, excludeIds = [] } = params;
 
   let query = supabase
     .from("questions")
@@ -24,6 +67,7 @@ export async function fetchQuestions(params: {
     .order("created_at", { ascending: false });
 
   if (subject) query = query.eq("subject", subject);
+  if (topic) query = query.eq("topic", topic);
   if (difficulty && difficulty !== "All") query = query.eq("difficulty", difficulty);
   if (excludeIds.length > 0) query = query.not("id", "in", `(${excludeIds.join(",")})`);
 
@@ -39,26 +83,37 @@ export async function fetchPrioritizedQuestions(params: {
   userId: string;
   exam: string;
   subject?: string;
+  topic?: string;
   difficulty?: string;
   limit?: number;
   seenIds?: string[];
 }): Promise<Question[]> {
   const supabase = createClient();
-  const { userId, exam, subject, difficulty, limit = 20, seenIds = [] } = params;
+  const { userId, exam, subject, topic, difficulty, limit = 20, seenIds = [] } = params;
 
-  // 1. Get due recall/review cards first
-  const { data: dueProgressRaw } = await supabase
+  const { data: progressRaw } = await supabase
     .from("user_progress")
-    .select("question_id, deck_type")
-    .eq("user_id", userId)
-    .lte("next_due_at", new Date().toISOString())
-    .in("deck_type", ["recall", "review"])
-    .limit(10);
+    .select("question_id, deck_type, next_due_at")
+    .eq("user_id", userId);
 
-  const dueProgress = (dueProgressRaw || []) as Array<{ question_id: string; deck_type: string }>;
-  const dueIds = dueProgress.map((p) => p.question_id);
+  const progress = (progressRaw || []) as Array<{
+    question_id: string;
+    deck_type: "unseen" | "recall" | "review" | null;
+    next_due_at: string | null;
+  }>;
+  const now = Date.now();
+  const recallDueIds = progress
+    .filter((item) => item.deck_type === "recall" && item.next_due_at && new Date(item.next_due_at).getTime() <= now)
+    .map((item) => item.question_id);
+  const reviewIds = progress
+    .filter((item) => item.deck_type === "review")
+    .map((item) => item.question_id);
+  const progressIds = progress.map((p) => p.question_id);
+  const excludeIds = Array.from(new Set([...seenIds, ...progressIds]));
+  const recallQuestions = await fetchQuestionsByIds({ ids: recallDueIds, exam, subject, topic, difficulty });
+  const recallUsedIds = recallQuestions.map((question) => question.id);
 
-  // 2. Get unseen questions (not in user_progress at all)
+  // Session order: recall due first, fresh unseen next, review deck last.
   let unseenQuery = supabase
     .from("questions")
     .select("*")
@@ -66,50 +121,30 @@ export async function fetchPrioritizedQuestions(params: {
     .eq("is_active", true);
 
   if (subject) unseenQuery = unseenQuery.eq("subject", subject);
+  if (topic) unseenQuery = unseenQuery.eq("topic", topic);
   if (difficulty && difficulty !== "All") unseenQuery = unseenQuery.eq("difficulty", difficulty);
 
-  const allExclude = [...seenIds, ...dueIds];
-  if (allExclude.length > 0) {
-    unseenQuery = unseenQuery.not("id", "in", `(${allExclude.join(",")})`);
+  if (excludeIds.length > 0) {
+    unseenQuery = unseenQuery.not("id", "in", `(${excludeIds.join(",")})`);
   }
 
   const { data: unseenQuestionsRaw } = await unseenQuery
-    .limit(limit)
+    .limit(Math.max(limit - recallQuestions.length, 0))
     .order("created_at", { ascending: false });
+
   const unseenQuestions = (unseenQuestionsRaw || []) as Question[];
+  const remaining = Math.max(limit - recallQuestions.length - unseenQuestions.length, 0);
+  const reviewQuestions = remaining > 0
+    ? await fetchQuestionsByIds({
+        ids: reviewIds.filter((id) => !recallUsedIds.includes(id)),
+        exam,
+        subject,
+        topic,
+        difficulty,
+      })
+    : [];
 
-  // 3. Fetch the due questions if we have them
-  let dueQuestions: Question[] = [];
-  if (dueIds.length > 0) {
-    const { data } = await supabase
-      .from("questions")
-      .select("*")
-      .in("id", dueIds)
-      .eq("is_active", true);
-    dueQuestions = (data || []) as Question[];
-  }
-
-  // 4. Combine: due first, then unseen, fill remaining with random
-  const combined = [...dueQuestions, ...unseenQuestions];
-  const remaining = limit - combined.length;
-
-  if (remaining > 0 && seenIds.length > 0) {
-    let fallbackQuery = supabase
-      .from("questions")
-      .select("*")
-      .eq("exam", exam)
-      .eq("is_active", true);
-    if (subject) fallbackQuery = fallbackQuery.eq("subject", subject);
-
-    const allUsed = [...seenIds, ...combined.map((q) => q.id)];
-    if (allUsed.length > 0) {
-      fallbackQuery = fallbackQuery.not("id", "in", `(${allUsed.join(",")})`);
-    }
-    const { data: fallbackRaw } = await fallbackQuery.limit(remaining);
-    combined.push(...((fallbackRaw || []) as Question[]));
-  }
-
-  return combined.slice(0, limit);
+  return [...recallQuestions, ...unseenQuestions, ...reviewQuestions.slice(0, remaining)].slice(0, limit);
 }
 
 export async function getTodayQuestionCount(userId: string): Promise<number> {
@@ -132,9 +167,10 @@ export async function recordAnswer(params: {
   questionId: string;
   isCorrect: boolean;
   timeSeconds: number;
+  recallFrequency?: RecallFrequency;
 }): Promise<void> {
   const supabase = createClient();
-  const { userId, questionId, isCorrect, timeSeconds } = params;
+  const { userId, questionId, isCorrect, timeSeconds, recallFrequency = "daily" } = params;
 
   const { data: existingRaw } = await supabase
     .from("user_progress")
@@ -152,12 +188,9 @@ export async function recordAnswer(params: {
     ? Math.round((existing.avg_time_seconds * (timesSeen - 1) + timeSeconds) / timesSeen)
     : timeSeconds;
 
-  // Calculate next due date using spaced repetition
-  const intervals = isCorrect ? [1, 3, 7, 14, 30, 60] : [0.5, 1, 2];
-  const idx = Math.min(timesCorrect - (isCorrect ? 1 : 0), intervals.length - 1);
-  const daysUntilDue = intervals[Math.max(0, idx)];
-  const nextDue = new Date();
-  nextDue.setTime(nextDue.getTime() + daysUntilDue * 24 * 60 * 60 * 1000);
+  const intervals = getRecallIntervals(recallFrequency);
+  const interval = isCorrect ? intervals[Math.min(timesCorrect - 1, intervals.length - 1)] : 0.5;
+  const nextDueAt = interval === null ? null : addDays(interval);
 
   await supabase.from("user_progress").upsert({
     user_id: userId,
@@ -166,7 +199,7 @@ export async function recordAnswer(params: {
     times_seen: timesSeen,
     times_correct: timesCorrect,
     last_seen_at: new Date().toISOString(),
-    next_due_at: nextDue.toISOString(),
+    next_due_at: nextDueAt,
     avg_time_seconds: avgTime,
-  });
+  }, { onConflict: "user_id,question_id" });
 }

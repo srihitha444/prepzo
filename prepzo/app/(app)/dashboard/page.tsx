@@ -28,17 +28,32 @@ export default async function DashboardPage() {
 
   const { data: todayProgressRaw } = await supabase
     .from("user_progress")
-    .select("times_seen, times_correct, avg_time_seconds")
+    .select("deck_type, avg_time_seconds")
     .eq("user_id", user.id)
     .gte("last_seen_at", today.toISOString());
-  const todayProgress = todayProgressRaw as Array<{ times_seen: number; times_correct: number; avg_time_seconds: number | null }> | null;
+  const todayProgress = todayProgressRaw as Array<{ deck_type: string | null; avg_time_seconds: number | null }> | null;
 
+  const { data: todayFlashcardsRaw } = await supabase
+    .from("user_flashcard_progress")
+    .select("id")
+    .eq("user_id", user.id)
+    .gte("last_seen_at", today.toISOString());
+  const flashcardsDone = todayFlashcardsRaw?.length || 0;
   const questionsDone = todayProgress?.length || 0;
-  const correctToday = todayProgress?.reduce((sum, p) => sum + p.times_correct, 0) || 0;
+  const totalDoneToday = questionsDone + flashcardsDone;
+  const correctToday = todayProgress?.filter((p) => p.deck_type === "recall").length || 0;
   const accuracyToday = questionsDone > 0 ? Math.round((correctToday / questionsDone) * 100) : 0;
-  const avgTime = questionsDone > 0
-    ? Math.round((todayProgress || []).reduce((s, p) => s + (p.avg_time_seconds || 0), 0) / questionsDone)
-    : 0;
+
+  // Avg time from quiz sessions only (not review/recall)
+  const { data: todaySessionsRaw } = await supabase
+    .from("quiz_sessions")
+    .select("total_questions, avg_time_seconds")
+    .eq("user_id", user.id)
+    .gte("completed_at", today.toISOString());
+  const todaySessions = todaySessionsRaw as Array<{ total_questions: number; avg_time_seconds: number | null }> | null;
+  const totalQuizTime = todaySessions?.reduce((s, session) => s + ((session.avg_time_seconds || 0) * (session.total_questions || 1)), 0) || 0;
+  const totalQuizQuestions = todaySessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0;
+  const avgTime = totalQuizQuestions > 0 ? Math.round(totalQuizTime / totalQuizQuestions) : 0;
 
   // Recall due count
   const { count: recallDue } = await supabase
@@ -48,25 +63,52 @@ export default async function DashboardPage() {
     .lte("next_due_at", new Date().toISOString())
     .in("deck_type", ["recall", "review"]);
 
-  // Subject progress
-  const subjects = getSubjectsForExam(profile.exam);
+  // Subject progress - get all subjects with their stats
+  const predefinedSubjects = getSubjectsForExam(profile.exam);
+  
   const { data: subjectProgressRaw } = await supabase
     .from("user_progress")
-    .select(`question_id, times_correct, times_seen, questions!inner(subject)`)
+    .select(`question_id, times_correct, times_seen, questions!inner(subject, topic)`)
     .eq("user_id", user.id);
-  const subjectProgress = subjectProgressRaw as Array<{ question_id: string; times_correct: number; times_seen: number; questions: { subject: string } }> | null;
+  const subjectProgress = subjectProgressRaw as Array<{ 
+    question_id: string; 
+    times_correct: number; 
+    times_seen: number; 
+    questions: { subject: string; topic: string | null } 
+  }> | null;
 
-  const subjectStats = subjects.map((subject) => {
-    const items = (subjectProgress || []).filter(
-      (p) => p.questions?.subject === subject
-    );
-    const done = items.length;
-    const correct = items.reduce((s, p) => s + p.times_correct, 0);
-    const accuracy = done > 0 ? Math.round((correct / done) * 100) : 0;
-    return { subject, done, accuracy };
+  // Build accuracy stats from attempted questions.
+  const subjectStatsMap = new Map<string, { done: number; correct: number; accuracy: number }>();
+  
+  (subjectProgress || []).forEach((p) => {
+    const subject = p.questions?.subject;
+    if (!subject) return;
+    
+    const existing = subjectStatsMap.get(subject) || { done: 0, correct: 0, accuracy: 0 };
+    const newDone = existing.done + p.times_seen;
+    const newCorrect = existing.correct + p.times_correct;
+    
+    subjectStatsMap.set(subject, {
+      done: newDone,
+      correct: newCorrect,
+      accuracy: Math.round((newCorrect / newDone) * 100),
+    });
   });
 
-  const dailyProgress = Math.min(100, Math.round((questionsDone / (profile.daily_goal || 20)) * 100));
+  // Show every NEET subject, plus any unexpected subjects from saved data.
+  const answeredSubjects = Array.from(subjectStatsMap.keys());
+  const allSubjects = [
+    ...predefinedSubjects,
+    ...answeredSubjects.filter(s => !predefinedSubjects.includes(s))
+  ];
+
+  const subjectStats = allSubjects.map((subject) => ({
+    subject,
+    ...(subjectStatsMap.get(subject) || { done: 0, correct: 0, accuracy: 0 }),
+  }));
+
+  const totalDailyGoal = profile.daily_goal || 20;
+  const dailyProgress = Math.min(100, Math.round((totalDoneToday / totalDailyGoal) * 100));
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -103,7 +145,7 @@ export default async function DashboardPage() {
             <span className="text-sm font-semibold text-[#0F172A]">Today&apos;s Goal</span>
           </div>
           <span className="text-sm font-medium text-[#64748B]">
-            {questionsDone} / {profile.daily_goal} questions
+            {totalDoneToday} / {totalDailyGoal} items
           </span>
         </div>
         <div className="w-full h-3 bg-[#F1F5F9] rounded-full overflow-hidden">
@@ -186,7 +228,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Subject progress */}
-      <Card>
+      <Card className="rounded-[14px]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <BarChart2 size={16} className="text-[#1E3A8A]" />
@@ -197,13 +239,13 @@ export default async function DashboardPage() {
         <div className="space-y-4">
           {subjectStats.map((stat) => (
             <div key={stat.subject}>
-              <div className="flex items-center justify-between text-xs mb-1.5">
+              <div className="flex items-center justify-between text-sm mb-2">
                 <span className="font-medium text-[#0F172A]">{stat.subject}</span>
-                <span className="text-[#64748B]">
+                <span className="text-[#476081]">
                   {stat.done} done · {stat.accuracy}% accuracy
                 </span>
               </div>
-              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-[#F1F5F9] rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
                     stat.accuracy >= 70 ? "bg-[#16A34A]" : stat.accuracy >= 50 ? "bg-[#D97706]" : stat.done > 0 ? "bg-[#DC2626]" : "bg-[#E2E8F0]"

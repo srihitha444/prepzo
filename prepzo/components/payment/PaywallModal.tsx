@@ -26,8 +26,8 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
         <div className="bg-[#F8FAFF] rounded-xl p-4 mb-6 text-left">
           <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-3">What you get with Pro</p>
           {[
-            "Full access to MCQs",
-            "All 3 exams (JEE Main, NEET, CUET)",
+            "Full access to NEET MCQs",
+            "Full NEET syllabus coverage",
             "Advanced Recall with spaced repetition",
             "Speed Mode flashcards",
             "Detailed analytics & weak topics",

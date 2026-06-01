@@ -49,14 +49,13 @@ export function TourOverlay() {
   const [step, setStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
-  const [mounted, setMounted] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
     const completed = localStorage.getItem("prepzo_tour_completed");
     if (!completed) {
-      setTimeout(() => setActive(true), 800);
+      const timer = window.setTimeout(() => setActive(true), 800);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -101,7 +100,8 @@ export function TourOverlay() {
   }, [active, step]);
 
   useEffect(() => {
-    updatePositions();
+    const frame = window.requestAnimationFrame(updatePositions);
+    return () => window.cancelAnimationFrame(frame);
   }, [updatePositions]);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ export function TourOverlay() {
     }
   }
 
-  if (!mounted || !active) return null;
+  if (!active) return null;
 
   const currentStep = TOUR_STEPS[step];
   const isLast = step === TOUR_STEPS.length - 1;

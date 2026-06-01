@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 
 export const FREE_DAILY_FC_LIMIT = 5;
 const DAILY_FC_KEY = "prepzo_daily_fcs";
+type RecallFrequency = "daily" | "every2days" | "weekly";
 
 interface UseFlashcardsOptions {
   exam: string;
@@ -52,6 +53,52 @@ function incrementFcSeen(): number {
   } catch { return 0; }
 }
 
+function getFlashcardRecallFrequency(): RecallFrequency {
+  try {
+    const prefs = JSON.parse(localStorage.getItem("prepzo_prefs") || "{}");
+    return prefs.flashcardRecallFrequency || prefs.recallFrequency || "daily";
+  } catch {
+    return "daily";
+  }
+}
+
+function getRecallIntervals(frequency: RecallFrequency): Array<number | null> {
+  if (frequency === "weekly") return [7, null];
+  if (frequency === "every2days") return [2, 7, 7];
+  return [1, 3, 3];
+}
+
+function addDays(days: number): string {
+  const nextDue = new Date();
+  nextDue.setTime(nextDue.getTime() + days * 24 * 60 * 60 * 1000);
+  return nextDue.toISOString();
+}
+
+async function fetchFlashcardsByIds(params: {
+  ids: string[];
+  exam: string;
+  subject?: string;
+}): Promise<Flashcard[]> {
+  const { ids, exam, subject } = params;
+  if (ids.length === 0) return [];
+
+  const supabase = createClient();
+  let query = supabase
+    .from("flashcards")
+    .select("*")
+    .in("id", ids)
+    .eq("exam", exam)
+    .eq("is_active", true);
+
+  if (subject) query = query.eq("subject", subject);
+
+  const { data } = await query;
+  const cards = (data || []) as Flashcard[];
+  return ids
+    .map((id) => cards.find((card) => card.id === id))
+    .filter((card): card is Flashcard => Boolean(card));
+}
+
 export function useFlashcards({ exam, subject, userId, plan }: UseFlashcardsOptions) {
   const isFree = plan !== "paid";
   const [cards, setCards] = useState<Flashcard[]>([]);
@@ -76,34 +123,43 @@ export function useFlashcards({ exam, subject, userId, plan }: UseFlashcardsOpti
         .from("flashcards").select("*").in("id", savedIds).eq("is_active", true);
       result = (data || []) as Flashcard[];
     } else {
-      // New day: get previously seen flashcard IDs to exclude
-      const { data: seenRaw } = await supabase
+      const { data: progressRaw } = await supabase
         .from("user_flashcard_progress")
-        .select("flashcard_id, next_due_at")
+        .select("flashcard_id, deck_type, next_due_at")
         .eq("user_id", userId);
 
-      const seenIds = (seenRaw || []).map((r: { flashcard_id: string; next_due_at: string | null }) => r.flashcard_id);
-      const dueIds = (seenRaw || [])
-        .filter((r: { flashcard_id: string; next_due_at: string | null }) => r.next_due_at && new Date(r.next_due_at) <= new Date())
-        .map((r: { flashcard_id: string; next_due_at: string | null }) => r.flashcard_id);
+      const progress = (progressRaw || []) as Array<{
+        flashcard_id: string;
+        deck_type: "unseen" | "recall" | "review" | null;
+        next_due_at: string | null;
+      }>;
+      const now = Date.now();
+      const recallDueIds = progress
+        .filter((item) => item.deck_type === "recall" && item.next_due_at && new Date(item.next_due_at).getTime() <= now)
+        .map((item) => item.flashcard_id);
+      const reviewIds = progress
+        .filter((item) => item.deck_type === "review")
+        .map((item) => item.flashcard_id);
+      const seenIds = progress.map((item) => item.flashcard_id);
+      const recallCards = await fetchFlashcardsByIds({ ids: recallDueIds, exam, subject });
 
-      // Fetch new (unseen) cards
       let newQuery = supabase.from("flashcards").select("*").eq("exam", exam).eq("is_active", true);
       if (subject) newQuery = newQuery.eq("subject", subject);
-      const excludeFromNew = seenIds.filter((id) => !dueIds.includes(id));
-      if (excludeFromNew.length > 0) newQuery = newQuery.not("id", "in", `(${excludeFromNew.join(",")})`);
-      const { data: newCards } = await newQuery.limit(isFree ? FREE_DAILY_FC_LIMIT : 50);
+      if (seenIds.length > 0) newQuery = newQuery.not("id", "in", `(${seenIds.join(",")})`);
+      const limit = isFree ? FREE_DAILY_FC_LIMIT : 50;
+      const { data: newCards } = await newQuery.limit(Math.max(limit - recallCards.length, 0));
 
-      // Fetch due cards (spaced repetition)
-      let dueCards: Flashcard[] = [];
-      if (dueIds.length > 0) {
-        let dueQuery = supabase.from("flashcards").select("*").in("id", dueIds).eq("is_active", true);
-        if (subject) dueQuery = dueQuery.eq("subject", subject);
-        const { data: due } = await dueQuery;
-        dueCards = (due || []) as Flashcard[];
-      }
+      const unseenCards = (newCards || []) as Flashcard[];
+      const remaining = Math.max(limit - recallCards.length - unseenCards.length, 0);
+      const reviewCards = remaining > 0
+        ? await fetchFlashcardsByIds({
+            ids: reviewIds.filter((id) => !recallDueIds.includes(id)),
+            exam,
+            subject,
+          })
+        : [];
 
-      result = [...dueCards, ...((newCards || []) as Flashcard[])].slice(0, isFree ? FREE_DAILY_FC_LIMIT : 50);
+      result = [...recallCards, ...unseenCards, ...reviewCards.slice(0, remaining)].slice(0, limit);
       saveDailyFCSession(exam, subject, result.map((c) => c.id));
     }
 
@@ -111,17 +167,22 @@ export function useFlashcards({ exam, subject, userId, plan }: UseFlashcardsOpti
     setCurrentIndex(0);
     setFlipped(false);
 
-    // Check daily limit on load
+    // Check daily limit on load without consuming a card.
     if (isFree) {
       const count = getFcSeenCount();
       if (count >= FREE_DAILY_FC_LIMIT) setDailyLimitReached(true);
-      else incrementFcSeen(); // count first card
+      else setDailyLimitReached(false);
     }
 
     setLoading(false);
   }, [exam, subject, userId, isFree]);
 
-  useEffect(() => { fetchCards(); }, [fetchCards]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchCards();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCards]);
 
   async function markCard(deck: "recall" | "review") {
     if (!cards[currentIndex]) return;
@@ -131,13 +192,26 @@ export function useFlashcards({ exam, subject, userId, plan }: UseFlashcardsOpti
     if (deck === "recall") setRecallCount((c) => c + 1);
     else setReviewCount((c) => c + 1);
 
+    const { data: existingRaw } = await supabase
+      .from("user_flashcard_progress")
+      .select("times_seen")
+      .eq("user_id", userId)
+      .eq("flashcard_id", card.id)
+      .single();
+
+    const existing = existingRaw as { times_seen: number | null } | null;
+    const successCount = deck === "recall" ? (existing?.times_seen || 0) + 1 : existing?.times_seen || 0;
+    const interval = deck === "recall"
+      ? getRecallIntervals(getFlashcardRecallFrequency())[Math.min(successCount - 1, getRecallIntervals(getFlashcardRecallFrequency()).length - 1)]
+      : 0.5;
+
     await supabase.from("user_flashcard_progress").upsert({
       user_id: userId,
       flashcard_id: card.id,
       deck_type: deck,
-      times_seen: 1,
+      times_seen: successCount,
       last_seen_at: new Date().toISOString(),
-      next_due_at: new Date(Date.now() + (deck === "recall" ? 3 : 1) * 86400000).toISOString(),
+      next_due_at: interval === null ? null : addDays(interval),
     }, { onConflict: "user_id,flashcard_id" });
 
     toast.success(deck === "recall" ? "Added to Recall deck ✓" : "Added to Review deck");
@@ -148,11 +222,12 @@ export function useFlashcards({ exam, subject, userId, plan }: UseFlashcardsOpti
 
   function goNext() {
     if (isFree && !dailyLimitReached) {
-      const newCount = incrementFcSeen();
-      if (newCount >= FREE_DAILY_FC_LIMIT) {
+      if (currentIndex >= FREE_DAILY_FC_LIMIT - 1 || currentIndex >= cards.length - 1) {
+        incrementFcSeen();
         setDailyLimitReached(true);
         return;
       }
+      incrementFcSeen();
     }
     setFlipped(false);
     setTimeout(() => setCurrentIndex((i) => Math.min(i + 1, cards.length - 1)), 150);

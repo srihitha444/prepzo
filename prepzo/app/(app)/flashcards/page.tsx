@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useFlashcards } from "@/hooks/useFlashcards";
 import { FlashCard } from "@/components/flashcard/FlashCard";
@@ -14,7 +14,7 @@ export default function FlashcardsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [speedMode, setSpeedMode] = useState(false);
-  const [speedTimer, setSpeedTimer] = useState<ReturnType<typeof setInterval> | null>(null);
+  const speedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [reviewFlipped, setReviewFlipped] = useState(false);
@@ -25,7 +25,7 @@ export default function FlashcardsPage() {
   }, []);
 
   const isFree = profile?.plan !== "paid";
-  const subjects = profile?.exam ? getSubjectsForExam(profile.exam) : [];
+  const subjects = getSubjectsForExam(profile?.exam || "NEET");
 
   const {
     currentCard,
@@ -43,7 +43,7 @@ export default function FlashcardsPage() {
     displayTotal,
     seenCards,
   } = useFlashcards({
-    exam: profile?.exam || "JEE",
+    exam: profile?.exam || "NEET",
     subject: selectedSubject || undefined,
     userId: profile?.id || "",
     plan: profile?.plan || "free",
@@ -55,6 +55,11 @@ export default function FlashcardsPage() {
   }, [flipped, flip, goNext]);
 
   useEffect(() => {
+    if (speedTimerRef.current) {
+      clearInterval(speedTimerRef.current);
+      speedTimerRef.current = null;
+    }
+
     if (speedMode) {
       const interval = (() => {
         try {
@@ -62,13 +67,16 @@ export default function FlashcardsPage() {
           return typeof prefs.speedModeInterval === "number" ? prefs.speedModeInterval * 1000 : 5000;
         } catch { return 5000; }
       })();
-      const timer = setInterval(handleSpeedAdvance, interval);
-      setSpeedTimer(timer);
-      return () => clearInterval(timer);
-    } else {
-      if (speedTimer) clearInterval(speedTimer);
+      speedTimerRef.current = setInterval(handleSpeedAdvance, interval);
     }
-  }, [speedMode, handleSpeedAdvance]); // eslint-disable-line
+
+    return () => {
+      if (speedTimerRef.current) {
+        clearInterval(speedTimerRef.current);
+        speedTimerRef.current = null;
+      }
+    };
+  }, [speedMode, handleSpeedAdvance]);
 
   if (!profile) {
     return <div className="p-4 md:p-8 max-w-2xl mx-auto"><FlashcardSkeleton /></div>;

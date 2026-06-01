@@ -32,7 +32,7 @@ export default function UpgradePage() {
         <h1 className="font-[family-name:var(--font-fraunces)] text-3xl font-bold text-[#0F172A] mb-3">
           Upgrade to Prepzo Pro
         </h1>
-        <p className="text-[#64748B]">Unlock unlimited practice and all features for every exam.</p>
+        <p className="text-[#64748B]">Unlock unlimited NEET practice and all Prepzo features.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5 mb-10">
@@ -86,8 +86,8 @@ export default function UpgradePage() {
 }
 
 const PRO_FEATURES = [
-  "Full access to MCQs",
-  "All 3 exams (JEE Main, NEET, CUET)",
+  "Full access to NEET MCQs",
+  "Full NEET syllabus coverage",
   "Advanced Recall with spaced repetition",
   "Full + Speed Mode flashcards",
   "Detailed analytics",
@@ -97,7 +97,7 @@ const PRO_FEATURES = [
 
 const COMPARISON = [
   { feature: "Daily MCQs", free: "15/day", pro: "Unlimited" },
-  { feature: "Exams", free: "1 exam", pro: "JEE + NEET + CUET" },
+  { feature: "Exam track", free: "NEET only", pro: "Full NEET coverage" },
   { feature: "Flashcards", free: "5 per session", pro: "Full + Speed Mode" },
   { feature: "Analytics", free: "Basic", pro: "Detailed" },
   { feature: "Weak topic detection", free: "✗", pro: "✓" },

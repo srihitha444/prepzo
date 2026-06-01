@@ -10,7 +10,7 @@ interface UseQuizOptions {
   userId: string;
   exam: string;
   subject?: string;
-  difficulty?: string;
+  topic?: string;
   plan: "free" | "paid";
   dailyGoal?: number;
 }
@@ -18,6 +18,7 @@ interface UseQuizOptions {
 interface AnswerRecord {
   questionId: string;
   correct: boolean;
+  skipped: boolean;
   timeSeconds: number;
   topic: string | null;
   subject: string;
@@ -25,18 +26,27 @@ interface AnswerRecord {
 
 const DAILY_MCQ_KEY = "prepzo_daily_mcqs";
 
-function getDailySession(exam: string, subject?: string): { ids: string[] } | null {
+function getMcqRecallFrequency(): "daily" | "every2days" | "weekly" {
+  try {
+    const prefs = JSON.parse(localStorage.getItem("prepzo_prefs") || "{}");
+    return prefs.mcqRecallFrequency || prefs.recallFrequency || "daily";
+  } catch {
+    return "daily";
+  }
+}
+
+function getDailySession(exam: string, subject?: string, topic?: string): { ids: string[] } | null {
   try {
     const raw = JSON.parse(localStorage.getItem(DAILY_MCQ_KEY) || "{}");
-    const key = `${exam}:${subject || ""}`;
+    const key = `${exam}:${subject || ""}:${topic || ""}`;
     if (raw.date === getISTDate() && raw[key]) return { ids: raw[key] };
     return null;
   } catch { return null; }
 }
 
-function saveDailySession(exam: string, subject: string | undefined, ids: string[]) {
+function saveDailySession(exam: string, subject: string | undefined, topic: string | undefined, ids: string[]) {
   try {
-    const key = `${exam}:${subject || ""}`;
+    const key = `${exam}:${subject || ""}:${topic || ""}`;
     const existing = JSON.parse(localStorage.getItem(DAILY_MCQ_KEY) || "{}");
     const date = getISTDate();
     const updated = existing.date === date ? { ...existing, [key]: ids } : { date, [key]: ids };
@@ -44,7 +54,7 @@ function saveDailySession(exam: string, subject: string | undefined, ids: string
   } catch {}
 }
 
-export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: UseQuizOptions) {
+export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQuizOptions) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -62,7 +72,7 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
     } catch { return 30; }
   })();
   const [timeLeft, setTimeLeft] = useState(mcqTimerDuration);
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState(() => Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = useCallback(() => {
@@ -92,7 +102,7 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
     const supabase = createClient();
 
     // Check for today's saved session (same questions same day)
-    const dailySession = getDailySession(exam, subject);
+    const dailySession = getDailySession(exam, subject, topic);
     let newQuestions: Question[] = [];
 
     if (dailySession && dailySession.ids.length > 0) {
@@ -107,15 +117,15 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
       // New day or first load: fetch prioritized questions
       const limit = plan === "free" ? FREE_DAILY_LIMIT : Math.max(dailyGoal || 20, 30);
       newQuestions = await fetchPrioritizedQuestions({
-        userId, exam, subject, difficulty, limit, seenIds: [],
+        userId, exam, subject, topic, limit, seenIds: [],
       });
       // Save today's assignment
-      saveDailySession(exam, subject, newQuestions.map((q) => q.id));
+      saveDailySession(exam, subject, topic, newQuestions.map((q) => q.id));
     }
 
     setQuestions(newQuestions);
     setLoading(false);
-  }, [userId, exam, subject, difficulty, plan, dailyGoal]);
+  }, [userId, exam, subject, topic, plan, dailyGoal]);
 
   useEffect(() => {
     const init = async () => {
@@ -134,21 +144,44 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
 
   useEffect(() => {
     if (!loading && questions.length > 0 && !sessionEnded) {
-      startTimer();
+      const timer = setTimeout(() => startTimer(), 0);
+      return () => {
+        clearTimeout(timer);
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [currentIndex, loading, questions.length, sessionEnded, startTimer]);
 
-  function handleAutoSkip() {
+  async function recordCurrentAnswer(option: string | null) {
+    const question = questions[currentIndex];
+    if (!question) return null;
+
+    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+    const isCorrect = option === question.correct_option;
+
+    await recordAnswer({
+      userId,
+      questionId: question.id,
+      isCorrect,
+      timeSeconds: elapsed,
+      recallFrequency: getMcqRecallFrequency(),
+    });
+
+    return {
+      questionId: question.id,
+      correct: isCorrect,
+      skipped: option === null,
+      timeSeconds: elapsed,
+      topic: question.topic,
+      subject: question.subject,
+    };
+  }
+
+  async function handleAutoSkip() {
     if (!answered && questions[currentIndex]) {
-      const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-      setAnswers((prev) => [...prev, {
-        questionId: questions[currentIndex].id,
-        correct: false,
-        timeSeconds: elapsed,
-        topic: questions[currentIndex].topic,
-        subject: questions[currentIndex].subject,
-      }]);
+      const answer = await recordCurrentAnswer(null);
+      if (answer) setAnswers((prev) => [...prev, answer]);
       setAnswered(true);
       setSelectedOption(null);
     }
@@ -157,10 +190,6 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
   async function handleAnswer(option: string) {
     if (answered) return;
     if (timerRef.current) clearInterval(timerRef.current);
-
-    const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-    const question = questions[currentIndex];
-    const isCorrect = option === question.correct_option;
 
     setSelectedOption(option);
     setAnswered(true);
@@ -174,15 +203,10 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
       }
     }
 
-    await recordAnswer({ userId, questionId: question.id, isCorrect, timeSeconds: elapsed });
+    const answer = await recordCurrentAnswer(option);
+    if (!answer) return;
 
-    const newAnswers = [...answers, {
-      questionId: question.id,
-      correct: isCorrect,
-      timeSeconds: elapsed,
-      topic: question.topic,
-      subject: question.subject,
-    }];
+    const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
 
     // Check if daily goal reached
@@ -192,7 +216,10 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
   }
 
   async function nextQuestion() {
-    if (currentIndex >= questions.length - 1) return;
+    if (currentIndex >= questions.length - 1) {
+      await endSession();
+      return;
+    }
     setSelectedOption(null);
     setAnswered(false);
     setCurrentIndex((i) => i + 1);
@@ -204,7 +231,8 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
 
     const supabase = createClient();
     const correct = answers.filter((a) => a.correct).length;
-    const wrong = answers.filter((a) => !a.correct).length;
+    const skipped = answers.filter((a) => a.skipped).length;
+    const wrong = answers.filter((a) => !a.correct && !a.skipped).length;
     const avgTime = answers.length > 0
       ? Math.round(answers.reduce((s, a) => s + a.timeSeconds, 0) / answers.length)
       : 0;
@@ -212,6 +240,7 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
     await supabase.from("quiz_sessions").insert({
       user_id: userId, exam, subject: subject || null,
       total_questions: answers.length, correct, wrong,
+      skipped,
       avg_time_seconds: avgTime,
     });
 
@@ -237,9 +266,10 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
 
   const currentQuestion = questions[currentIndex] || null;
   const correct = answers.filter((a) => a.correct).length;
-  const wrong = answers.filter((a) => !a.correct).length;
+  const skipped = answers.filter((a) => a.skipped).length;
+  const wrong = answers.filter((a) => !a.correct && !a.skipped).length;
   const accuracy = answers.length > 0 ? Math.round((correct / answers.length) * 100) : 0;
-  const negativeMarking = exam === "JEE" || exam === "NEET" ? 1 / 3 : 0.25;
+  const negativeMarking = 1 / 3;
   const score = correct * 4 - wrong * negativeMarking;
 
   return {
@@ -254,7 +284,7 @@ export function useQuiz({ userId, exam, subject, difficulty, plan, dailyGoal }: 
     goalReached,
     timeLeft,
     answers,
-    stats: { correct, wrong, accuracy, score: Math.round(score * 100) / 100, total: answers.length },
+    stats: { correct, wrong, skipped, accuracy, score: Math.round(score * 100) / 100, total: answers.length },
     handleAnswer,
     nextQuestion,
     endSession,
