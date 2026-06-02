@@ -1,24 +1,24 @@
-## **TERMS AND CONDITIONS**
+## TERMS AND CONDITIONS
 
 Last updated: 2026-06-03
 
-1. **Introduction**
+1. Introduction
 
-Welcome to **Prepzo** (“Company”, “we”, “our”, “us”)!
+Welcome to Prepzo (“Company”, “we”, “our”, “us”)!
 
-These Terms of Service (“Terms”, “Terms of Service”) govern your use of our website located at **https://www.prepzo.study/** (together or individually “Service”) operated by **Prepzo**.
+These Terms of Service (“Terms”, “Terms of Service”) govern your use of our website located at https://www.prepzo.study/ (together or individually “Service”) operated by Prepzo.
 
 Our Privacy Policy also governs your use of our Service and explains how we collect, safeguard and disclose information that results from your use of our web pages.
 
 Your agreement with us includes these Terms and our Privacy Policy (“Agreements”). You acknowledge that you have read and understood Agreements, and agree to be bound of them.
 
-If you do not agree with (or cannot comply with) Agreements, then you may not use the Service, but please let us know by emailing at **support@prepzo.study** so we can try to find a solution. These Terms apply to all visitors, users and others who wish to access or use Service.
+If you do not agree with (or cannot comply with) Agreements, then you may not use the Service, but please let us know by emailing at support@prepzo.study so we can try to find a solution. These Terms apply to all visitors, users and others who wish to access or use Service.
 
-2. **Communications**
+2. Communications
 
 By using our Service, you agree to subscribe to newsletters, marketing or promotional materials and other information we may send. However, you may opt out of receiving any, or all, of these communications from us by following the unsubscribe link or by emailing at support@prepzo.study.
 
-3. **Purchases**
+3. Purchases
 
 If you wish to purchase any product or service made available through Service (“Purchase”), you may be asked to supply certain information relevant to your Purchase including but not limited to, your credit or debit card number, the expiration date of your card, your billing address, and your shipping information.
 
@@ -30,11 +30,11 @@ We reserve the right to refuse or cancel your order at any time for reasons incl
 
 We reserve the right to refuse or cancel your order if fraud or an unauthorized or illegal transaction is suspected.
 
-4. **Contests, Sweepstakes and Promotions**
+4. Contests, Sweepstakes and Promotions
 
 Any contests, sweepstakes or other promotions (collectively, “Promotions”) made available through Service may be governed by rules that are separate from these Terms of Service. If you participate in any Promotions, please review the applicable rules as well as our Privacy Policy. If the rules for a Promotion conflict with these Terms of Service, Promotion rules will apply.
 
-5. **Subscriptions**
+5. Subscriptions
 
 Some parts of Service are billed on a subscription basis ("Subscription(s)"). You will be billed in advance on a recurring and periodic basis ("Billing Cycle"). Billing cycles will be set depending on the type of subscription plan you select when purchasing a Subscription.
 
@@ -44,7 +44,7 @@ A valid payment method is required to process the payment for your subscription.
 
 Should automatic billing fail to occur for any reason, Prepzo reserves the right to terminate your access to the Service with immediate effect.
 
-6. **Free Trial**
+6. Free Trial
 
 Prepzo may, at its sole discretion, offer a Subscription with a free trial for a limited period of time ("Free Trial").
 
@@ -54,7 +54,7 @@ If you do enter your billing information when signing up for Free Trial, you wil
 
 At any time and without notice, Prepzo reserves the right to (i) modify Terms of Service of Free Trial offer, or (ii) cancel such Free Trial offer.
 
-7. **Fee Changes**
+7. Fee Changes
 
 Prepzo, in its sole discretion and at any time, may modify Subscription fees for the Subscriptions. Any Subscription fee change will become effective at the end of the then-current Billing Cycle.
 
@@ -62,15 +62,15 @@ Prepzo will provide you with a reasonable prior notice of any change in Subscrip
 
 Your continued use of Service after Subscription fee change comes into effect constitutes your agreement to pay the modified Subscription fee amount.
 
-8. **Refunds**
+8. Refunds
 
-We issue refunds for Contracts within 7 **days** of the original purchase of the Contract.
+We issue refunds for Contracts within 7 days of the original purchase of the Contract.
 
-9. **Content**
+9. Content
 
 Content found on or through this Service are the property of Prepzo or used with permission. You may not distribute, modify, transmit, reuse, download, repost, copy, or use said Content, whether in whole or in part, for commercial purposes or for personal gain, without express advance written permission from us.
 
-10. **Prohibited Uses**
+10. Prohibited Uses
 
 You may use Service only for lawful purposes and in accordance with Terms. You agree not to use Service:
 
@@ -106,15 +106,15 @@ Additionally, you agree not to:
 
 0.9. Otherwise attempt to interfere with the proper working of Service.
 
-11. **Analytics**
+11. Analytics
 
 We may use third-party Service Providers to monitor and analyze the use of our Service.
 
-12. **No Use By Minors**
+12. No Use By Minors
 
 Service is intended only for access and use by individuals at least eighteen (18) years old. By accessing or using Service, you warrant and represent that you are at least eighteen (18) years of age and with the full authority, right, and capacity to enter into this agreement and abide by all of the terms and conditions of Terms. If you are not at least eighteen (18) years old, you are prohibited from both the access and usage of Service.
 
-13. **Accounts**
+13. Accounts
 
 When you create an account with us, you guarantee that you are above the age of 18, and that the information you provide us is accurate, complete, and current at all times. Inaccurate, incomplete, or obsolete information may result in the immediate termination of your account on Service.
 
@@ -124,11 +124,11 @@ You may not use as a username the name of another person or entity or that is no
 
 We reserve the right to refuse service, terminate accounts, remove or edit content, or cancel orders in our sole discretion.
 
-14. **Intellectual Property**
+14. Intellectual Property
 
 Service and its original content (excluding Content provided by users), features and functionality are and will remain the exclusive property of Prepzo and its licensors. Service is protected by copyright, trademark, and other laws of  and foreign countries. Our trademarks may not be used in connection with any product or service without the prior written consent of Prepzo.
 
-15. **Copyright Policy**
+15. Copyright Policy
 
 We respect the intellectual property rights of others. It is our policy to respond to any claim that Content posted on Service infringes on the copyright or other intellectual property rights (“Infringement”) of any person or entity.
 
@@ -136,7 +136,7 @@ If you are a copyright owner, or authorized on behalf of one, and you believe th
 
 You may be held accountable for damages (including costs and attorneys’ fees) for misrepresentation or bad-faith claims on the infringement of any Content found on and/or through Service on your copyright.
 
-16. **DMCA Notice and Procedure for Copyright Infringement Claims**
+16. DMCA Notice and Procedure for Copyright Infringement Claims
 
 You may submit a notification pursuant to the Digital Millennium Copyright Act (DMCA) by providing our Copyright Agent with the following information in writing (see 17 U.S.C 512(c)(3) for further detail):
 
@@ -154,11 +154,11 @@ You may submit a notification pursuant to the Digital Millennium Copyright Act (
 
 You can contact our Copyright Agent via email at support@prepzo.study.
 
-17. **Error Reporting and Feedback**
+17. Error Reporting and Feedback
 
 You may provide us either directly at support@prepzo.study or via third party sites and tools with information and feedback concerning errors, suggestions for improvements, ideas, problems, complaints, and other matters related to our Service (“Feedback”). You acknowledge and agree that: (i) you shall not retain, acquire or assert any intellectual property right or other right, title or interest in or to the Feedback; (ii) Company may have development ideas similar to the Feedback; (iii) Feedback does not contain confidential information or proprietary information from you or any third party; and (iv) Company is not under any obligation of confidentiality with respect to the Feedback. In the event the transfer of the ownership to the Feedback is not possible due to applicable mandatory laws, you grant Company and its affiliates an exclusive, transferable, irrevocable, free-of-charge, sub-licensable, unlimited and perpetual right to use (including copy, modify, create derivative works, publish, distribute and commercialize) Feedback in any manner and for any purpose.
 
-18. **Links To Other Web Sites**
+18. Links To Other Web Sites
 
 Our Service may contain links to third party web sites or services that are not owned or controlled by Prepzo.
 
@@ -170,7 +170,7 @@ YOU ACKNOWLEDGE AND AGREE THAT COMPANY SHALL NOT BE RESPONSIBLE OR LIABLE, DIREC
 
 WE STRONGLY ADVISE YOU TO READ THE TERMS OF SERVICE AND PRIVACY POLICIES OF ANY THIRD PARTY WEB SITES OR SERVICES THAT YOU VISIT.
 
-19. **Disclaimer Of Warranty**
+19. Disclaimer Of Warranty
 
 THESE SERVICES ARE PROVIDED BY COMPANY ON AN “AS IS” AND “AS AVAILABLE” BASIS. COMPANY MAKES NO REPRESENTATIONS OR WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, AS TO THE OPERATION OF THEIR SERVICES, OR THE INFORMATION, CONTENT OR MATERIALS INCLUDED THEREIN. YOU EXPRESSLY AGREE THAT YOUR USE OF THESE SERVICES, THEIR CONTENT, AND ANY SERVICES OR ITEMS OBTAINED FROM US IS AT YOUR SOLE RISK.
 
@@ -180,11 +180,11 @@ COMPANY HEREBY DISCLAIMS ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED,
 
 THE FOREGOING DOES NOT AFFECT ANY WARRANTIES WHICH CANNOT BE EXCLUDED OR LIMITED UNDER APPLICABLE LAW.
 
-20. **Limitation Of Liability**
+20. Limitation Of Liability
 
 EXCEPT AS PROHIBITED BY LAW, YOU WILL HOLD US AND OUR OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS HARMLESS FOR ANY INDIRECT, PUNITIVE, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGE, HOWEVER IT ARISES (INCLUDING ATTORNEYS’ FEES AND ALL RELATED COSTS AND EXPENSES OF LITIGATION AND ARBITRATION, OR AT TRIAL OR ON APPEAL, IF ANY, WHETHER OR NOT LITIGATION OR ARBITRATION IS INSTITUTED), WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE, OR OTHER TORTIOUS ACTION, OR ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT, INCLUDING WITHOUT LIMITATION ANY CLAIM FOR PERSONAL INJURY OR PROPERTY DAMAGE, ARISING FROM THIS AGREEMENT AND ANY VIOLATION BY YOU OF ANY FEDERAL, STATE, OR LOCAL LAWS, STATUTES, RULES, OR REGULATIONS, EVEN IF COMPANY HAS BEEN PREVIOUSLY ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. EXCEPT AS PROHIBITED BY LAW, IF THERE IS LIABILITY FOUND ON THE PART OF COMPANY, IT WILL BE LIMITED TO THE AMOUNT PAID FOR THE PRODUCTS AND/OR SERVICES, AND UNDER NO CIRCUMSTANCES WILL THERE BE CONSEQUENTIAL OR PUNITIVE DAMAGES. SOME STATES DO NOT ALLOW THE EXCLUSION OR LIMITATION OF PUNITIVE, INCIDENTAL OR CONSEQUENTIAL DAMAGES, SO THE PRIOR LIMITATION OR EXCLUSION MAY NOT APPLY TO YOU.
 
-21. **Termination**
+21. Termination
 
 We may terminate or suspend your account and bar access to Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever and without limitation, including but not limited to a breach of Terms.
 
@@ -192,17 +192,17 @@ If you wish to terminate your account, you may simply discontinue using Service.
 
 All provisions of Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity and limitations of liability.
 
-22. **Governing Law**
+22. Governing Law
 
 These Terms shall be governed and construed in accordance with the laws of India, which governing law applies to agreement without regard to its conflict of law provisions.
 
 Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights. If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in effect. These Terms constitute the entire agreement between us regarding our Service and supersede and replace any prior agreements we might have had between us regarding Service.
 
-23. **Changes To Service**
+23. Changes To Service
 
 We reserve the right to withdraw or amend our Service, and any service or material we provide via Service, in our sole discretion without notice. We will not be liable if for any reason all or any part of Service is unavailable at any time or for any period. From time to time, we may restrict access to some parts of Service, or the entire Service, to users, including registered users.
 
-24. **Amendments To Terms**
+24. Amendments To Terms
 
 We may amend Terms at any time by posting the amended terms on this site. It is your responsibility to review these Terms periodically.
 
@@ -210,18 +210,18 @@ Your continued use of the Platform following the posting of revised Terms means 
 
 By continuing to access or use our Service after any revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, you are no longer authorized to use Service.
 
-25. **Waiver And Severability**
+25. Waiver And Severability
 
 No waiver by Company of any term or condition set forth in Terms shall be deemed a further or continuing waiver of such term or condition or a waiver of any other term or condition, and any failure of Company to assert a right or provision under Terms shall not constitute a waiver of such right or provision.
 
 If any provision of Terms is held by a court or other tribunal of competent jurisdiction to be invalid, illegal or unenforceable for any reason, such provision shall be eliminated or limited to the minimum extent such that the remaining provisions of Terms will continue in full force and effect.
 
-26. **Acknowledgement**
+26. Acknowledgement
 
 BY USING SERVICE OR OTHER SERVICES PROVIDED BY US, YOU ACKNOWLEDGE THAT YOU HAVE READ THESE TERMS OF SERVICE AND AGREE TO BE BOUND BY THEM.
 
-27. **Contact Us**
+27. Contact Us
 
-Please send your feedback, comments, requests for technical support by email: **support@prepzo.study**.
+Please send your feedback, comments, requests for technical support by email: support@prepzo.study.
 
-These Terms of Service were created for **https://www.prepzo.study/** by PolicyMaker.io on 2026-06-03.
+These Terms of Service were created for https://www.prepzo.study/ by PolicyMaker.io on 2026-06-03.
