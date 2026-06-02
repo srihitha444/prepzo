@@ -128,6 +128,9 @@ export default function LoginPage() {
             Sign up free
           </Link>
         </p>
+        <p className="text-center text-xs text-[#64748B] mt-4">
+          By signing in, you agree to our <Link href="/terms" className="text-[#1E3A8A] font-semibold hover:underline">Terms</Link> and <Link href="/privacy-policy" className="text-[#1E3A8A] font-semibold hover:underline">Privacy Policy</Link>.
+        </p>
       </div>
     </div>
   );

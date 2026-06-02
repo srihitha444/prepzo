@@ -222,20 +222,22 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#E2E8F0] py-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <span className="font-[family-name:var(--font-fraunces)] text-xl font-bold text-[#1E3A8A]">Prepzo</span>
-            <p className="text-xs text-[#64748B] mt-1">Made with ❤️ for Indian students</p>
+      <footer className="border-t border-[#E2E8F0] py-14">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+          <div className="text-center">
+            <p className="text-sm font-semibold text-[#0F172A]">Support</p>
+            <a href="mailto:support@prepzo.study" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
+              support@prepzo.study
+            </a>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-[#64748B]">
+          <div className="flex flex-wrap justify-center items-center gap-4 text-sm font-medium text-[#64748B]">
             <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
             <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
             <a href="#pricing" className="hover:text-[#0F172A] transition-colors">Pricing</a>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-4 text-sm text-[#64748B]">
             <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
             <Link href="/privacy-policy" className="hover:text-[#0F172A] transition-colors">Privacy Policy</Link>
-            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">Support</a>
-            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">support@prepzo.study</a>
           </div>
         </div>
       </footer>
