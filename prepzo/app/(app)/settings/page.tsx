@@ -577,7 +577,7 @@ export default function SettingsPage() {
                   {profile?.plan === "paid" && (
                     <SettingsRow icon={AlertTriangle} label="Cancel Subscription"
                       sublabel="Access continues until end of billing period"
-                      onClick={() => toast("To cancel, contact support@prepzo.in")} danger />
+                      onClick={() => toast("To cancel, contact support@prepzo.study")} danger />
                   )}
                 </div>
               </Card>
@@ -591,10 +591,10 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <SettingsRow icon={HelpCircle} label="Help Center / FAQs" sublabel="Browse common questions and guides"
                   onClick={() => toast("Help Center coming soon")} />
-                <SettingsRow icon={Bell} label="Contact Support" sublabel="Reach us at support@prepzo.in"
-                  onClick={() => { window.location.href = "mailto:support@prepzo.in"; }} />
+                <SettingsRow icon={Bell} label="Contact Support" sublabel="Reach us at support@prepzo.study"
+                  onClick={() => { window.location.href = "mailto:support@prepzo.study"; }} />
                 <SettingsRow icon={AlertTriangle} label="Report a Bug" sublabel="Help us fix issues"
-                  onClick={() => { window.location.href = "mailto:bugs@prepzo.in?subject=Bug Report"; }} />
+                  onClick={() => { window.location.href = "mailto:support@prepzo.study?subject=Bug Report"; }} />
                 <SettingsRow icon={Check} label="Share Feedback" sublabel="Tell us how we can improve"
                   onClick={() => toast("Thanks! Feedback form coming soon")} />
               </div>

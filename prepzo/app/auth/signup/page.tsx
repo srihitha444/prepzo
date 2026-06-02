@@ -137,7 +137,7 @@ export default function SignupPage() {
             </button>
 
             <p className="text-xs text-[#64748B] text-center">
-              By signing up, you agree to our Terms of Service
+              By signing up, you agree to our <Link href="/terms" className="text-[#1E3A8A] font-semibold hover:underline">Terms</Link>
             </p>
           </form>
         </div>

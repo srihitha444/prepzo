@@ -232,8 +232,10 @@ export default function LandingPage() {
             <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
             <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
             <a href="#pricing" className="hover:text-[#0F172A] transition-colors">Pricing</a>
+            <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
             <Link href="/privacy-policy" className="hover:text-[#0F172A] transition-colors">Privacy Policy</Link>
-            <Link href="/terms-and-conditions" className="hover:text-[#0F172A] transition-colors">Terms and Conditions</Link>
+            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">Support</a>
+            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">support@prepzo.study</a>
           </div>
         </div>
       </footer>
