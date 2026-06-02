@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','paid')),
   daily_goal INTEGER DEFAULT 20,
   streak INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  recall_setting TEXT DEFAULT 'spaced-repetition' CHECK (recall_setting IN ('spaced-repetition','immediate','custom')),
   last_active DATE,
   tour_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -157,6 +159,7 @@ CREATE TABLE IF NOT EXISTS quiz_sessions (
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   exam TEXT NOT NULL,
   subject TEXT,
+  topic TEXT,
   total_questions INTEGER,
   correct INTEGER,
   wrong INTEGER,

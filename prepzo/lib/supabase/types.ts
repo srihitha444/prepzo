@@ -10,6 +10,8 @@ export interface Profile {
   plan: Plan;
   daily_goal: number;
   streak: number;
+  longest_streak: number;
+  recall_setting: string;
   last_active: string | null;
   tour_completed: boolean;
   created_at: string;
@@ -60,6 +62,7 @@ export interface QuizSession {
   user_id: string;
   exam: Exam;
   subject: string | null;
+  topic: string | null;
   total_questions: number | null;
   correct: number | null;
   wrong: number | null;
