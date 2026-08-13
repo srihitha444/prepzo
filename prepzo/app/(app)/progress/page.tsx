@@ -11,25 +11,42 @@ import { AlertTriangle, BarChart2, CalendarDays, Flame, Target } from "lucide-re
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { Profile } from "@/lib/supabase/types";
 
-type BreakdownTab = "mcq" | "flashcards" | "recall" | "review";
+type BreakdownTab = "mcq" | "pyq" | "flashcards" | "recall" | "review";
 
 const BREAKDOWN_TABS: Array<{ id: BreakdownTab; label: string }> = [
   { id: "mcq", label: "MCQ" },
+  { id: "pyq", label: "PYQ Soon" },
   { id: "flashcards", label: "Flashcards" },
   { id: "recall", label: "Recall" },
   { id: "review", label: "Review" },
 ];
 
 function toDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function getRecentDays(count: number) {
+function getDaysSince(startDate: Date, maxCount: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return Array.from({ length: count }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (count - 1 - index));
+
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+
+  const earliest = new Date(today);
+  earliest.setDate(today.getDate() - (maxCount - 1));
+  const firstDay = start > earliest ? start : earliest;
+
+  const dayCount = Math.max(
+    1,
+    Math.floor((today.getTime() - firstDay.getTime()) / 86400000) + 1
+  );
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(firstDay);
+    date.setDate(firstDay.getDate() + index);
     return date;
   });
 }
@@ -87,7 +104,9 @@ export default function ProgressPage() {
     return groups;
   }, new Map<string, typeof data.weakTopics>());
 
-  const freeDays = getRecentDays(7).map((date) => {
+  const accountCreatedAt = new Date(profile.created_at);
+
+  const freeDays = getDaysSince(accountCreatedAt, 7).map((date) => {
     const key = toDateKey(date);
     return {
       date: key,
@@ -98,7 +117,7 @@ export default function ProgressPage() {
   });
   const maxFreeAttempts = Math.max(1, ...freeDays.map((day) => day.stats?.totalAttempts || 0));
 
-  const heatmapDays = getRecentDays(365).map((date) => {
+  const heatmapDays = getDaysSince(accountCreatedAt, 365).map((date) => {
     const key = toDateKey(date);
     const stats = historyByDate.get(key);
     return { date: key, stats };
@@ -118,6 +137,10 @@ export default function ProgressPage() {
         mcqCorrect: day.stats?.mcqCorrect || 0,
         mcqSkipped: day.stats?.mcqSkipped || 0,
         mcqAccuracy: day.stats?.mcqAccuracy || 0,
+        pyqAttempts: day.stats?.pyqAttempts || 0,
+        pyqCorrect: day.stats?.pyqCorrect || 0,
+        pyqSkipped: day.stats?.pyqSkipped || 0,
+        pyqAccuracy: day.stats?.pyqAccuracy || 0,
         flashcardAttempts: day.stats?.flashcardAttempts || 0,
         flashcardCorrect: day.stats?.flashcardCorrect || 0,
         flashcardAccuracy: day.stats?.flashcardAccuracy || 0,
@@ -189,6 +212,27 @@ export default function ProgressPage() {
             Take an MCQ or flashcard to start building your accuracy chart.
           </div>
         )}
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Target size={16} className="text-[#1E3A8A]" />
+          <h3 className="text-sm font-semibold text-[#0F172A]">PYQ Progress Coming Soon</h3>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-[#F8FAFF] p-3">
+            <p className="font-[family-name:var(--font-dm-mono)] text-xl font-bold text-[#1E3A8A]">{data.pyqDone}</p>
+            <p className="text-xs text-[#64748B]">Attempted</p>
+          </div>
+          <div className="rounded-xl bg-[#F0FDF4] p-3">
+            <p className="font-[family-name:var(--font-dm-mono)] text-xl font-bold text-[#16A34A]">{data.pyqCorrect}</p>
+            <p className="text-xs text-[#64748B]">Correct</p>
+          </div>
+          <div className="rounded-xl bg-[#DBEAFE] p-3">
+            <p className="font-[family-name:var(--font-dm-mono)] text-xl font-bold text-[#1E3A8A]">{data.pyqAccuracy}%</p>
+            <p className="text-xs text-[#64748B]">Accuracy</p>
+          </div>
+        </div>
       </Card>
 
       <Card className="mb-6">
@@ -332,9 +376,9 @@ export default function ProgressPage() {
       <Card>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-[#0F172A]">Session Breakdown</h3>
-          <Badge variant={plan === "paid" ? "success" : "warning"}>{plan === "paid" ? "Unlimited" : "7 days"}</Badge>
+          <Badge variant={plan === "paid" ? "success" : "warning"}>{plan === "paid" ? "Full access" : "7 days"}</Badge>
         </div>
-        <div className="mb-4 grid grid-cols-4 rounded-xl bg-[#F8FAFF] p-1">
+        <div className="mb-4 grid grid-cols-5 rounded-xl bg-[#F8FAFF] p-1">
           {BREAKDOWN_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -380,11 +424,14 @@ function getBreakdownMetrics(
     mcqAccuracy: number;
     flashcardAttempts: number;
     flashcardAccuracy: number;
+    pyqAttempts: number;
+    pyqAccuracy: number;
     recallSeen: number;
     reviewSeen: number;
   },
   tab: BreakdownTab
 ) {
+  if (tab === "pyq") return { attempts: day.pyqAttempts, accuracy: day.pyqAccuracy };
   if (tab === "flashcards") return { attempts: day.flashcardAttempts, accuracy: day.flashcardAccuracy };
   if (tab === "recall") return { attempts: day.recallSeen, accuracy: day.recallSeen > 0 ? 100 : 0 };
   if (tab === "review") return { attempts: day.reviewSeen, accuracy: 0 };

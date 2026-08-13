@@ -31,6 +31,19 @@ export function getSubjectsForExam(exam: string): string[] {
   return [];
 }
 
+export function normalizeSubject(subject: string | null | undefined): string | null {
+  if (!subject) return null;
+  const key = subject.trim().toLowerCase();
+  if (!key) return null;
+
+  if (key === "physics") return "Physics";
+  if (key === "chemistry") return "Chemistry";
+  if (key === "botany") return "Botany";
+  if (key === "zoology" || key === "zology" || key === "zoo" || key === "biology") return "Zoology";
+
+  return subject.trim();
+}
+
 export function getNegativeMarking(): number {
   return 1 / 3;
 }

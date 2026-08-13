@@ -1,25 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, Brain, BarChart2 } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { LayoutDashboard, BookOpen, Brain, BarChart2, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard, id: "mobile-nav-dashboard" },
   { href: "/flashcards", label: "Flashcards", icon: BookOpen, id: "mobile-nav-flashcards" },
   { href: "/quiz", label: "Quiz", icon: Brain, id: "mobile-nav-quiz" },
+  { href: "/pyq", label: "PYQ Soon", icon: BookOpenCheck, id: "mobile-nav-pyq" },
   { href: "/progress", label: "Progress", icon: BarChart2, id: "mobile-nav-progress" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#E2E8F0] pb-safe">
       <div className="flex items-stretch">
         {navItems.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const isPyqQuiz = pathname.startsWith("/quiz") && searchParams.get("pyq") === "true";
+          const active = isPyqQuiz ? item.href === "/pyq" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

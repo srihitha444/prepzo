@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Plus, Search, Eye, EyeOff, Upload, Users, DollarSign } from "lucide-react";
+import { Plus, Search, Eye, EyeOff, Upload, Users, DollarSign, HandCoins } from "lucide-react";
 import toast from "react-hot-toast";
-import type { Question } from "@/lib/supabase/types";
+import type { Question, ReferralReward } from "@/lib/supabase/types";
 
-type AdminTab = "questions" | "add" | "analytics";
+type AdminTab = "questions" | "add" | "payouts";
 
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [filterExam, setFilterExam] = useState("NEET");
   const [analytics, setAnalytics] = useState({ users: 0, paid: 0, revenue: 0 });
+  const [rewards, setRewards] = useState<ReferralReward[]>([]);
 
   const [form, setForm] = useState({
     exam: "NEET",
@@ -68,15 +69,27 @@ export default function AdminPage() {
     setAnalytics({ users: users || 0, paid: paid || 0, revenue: revenue / 100 });
   }, []);
 
+  const loadRewards = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("referral_rewards")
+      .select("*")
+      .in("status", ["pending", "approved"])
+      .order("payout_month", { ascending: true })
+      .order("earned_at", { ascending: false });
+    setRewards((data || []) as ReferralReward[]);
+  }, []);
+
   useEffect(() => {
     if (authorized) {
       const timer = window.setTimeout(() => {
         void loadQuestions();
         void loadAnalytics();
+        void loadRewards();
       }, 0);
       return () => window.clearTimeout(timer);
     }
-  }, [authorized, loadQuestions, loadAnalytics]);
+  }, [authorized, loadQuestions, loadAnalytics, loadRewards]);
 
   async function handleAddQuestion(e: React.FormEvent) {
     e.preventDefault();
@@ -124,6 +137,22 @@ export default function AdminPage() {
     toast.success(`Uploaded ${questions.length} questions!`);
     loadQuestions();
     e.target.value = "";
+  }
+
+  async function markRewardPaid(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("referral_rewards")
+      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setRewards((items) => items.filter((item) => item.id !== id));
+    toast.success("Commission marked paid");
   }
 
   if (authorized === null) {
@@ -188,7 +217,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {(["questions", "add"] as AdminTab[]).map((tab) => (
+          {(["questions", "add", "payouts"] as AdminTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -196,7 +225,7 @@ export default function AdminPage() {
                 activeTab === tab ? "bg-[#1E3A8A] text-white" : "bg-white border border-[#E2E8F0] text-[#64748B]"
               }`}
             >
-              {tab === "questions" ? "All Questions" : "Add Question"}
+              {tab === "questions" ? "All Questions" : tab === "add" ? "Add Question" : "Referral Payouts"}
             </button>
           ))}
 
@@ -343,6 +372,86 @@ export default function AdminPage() {
                 Add Question
               </button>
             </form>
+          </Card>
+        )}
+
+        {activeTab === "payouts" && (
+          <Card>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="font-semibold text-[#0F172A] flex items-center gap-2">
+                <HandCoins size={18} className="text-[#1E3A8A]" />
+                Manual Referral Payouts
+              </h2>
+              <button
+                type="button"
+                onClick={loadRewards}
+                className="rounded-xl border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#64748B] hover:bg-[#F8FAFF]"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="mb-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                <p className="text-xs font-semibold text-[#64748B]">Pending entries</p>
+                <p className="mt-1 text-2xl font-bold text-[#0F172A]">{rewards.length}</p>
+              </div>
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                <p className="text-xs font-semibold text-[#64748B]">Pending payout</p>
+                <p className="mt-1 text-2xl font-bold text-[#0F172A]">
+                  Rs {Math.round(rewards.reduce((sum, item) => sum + item.commission_amount, 0) / 100)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                <p className="text-xs font-semibold text-[#64748B]">Payout timing</p>
+                <p className="mt-1 text-sm font-semibold text-[#0F172A]">Month end or day 1</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b border-[#E2E8F0] text-xs uppercase text-[#64748B]">
+                  <tr>
+                    <th className="py-3 pr-3">Payout month</th>
+                    <th className="py-3 pr-3">Referrer</th>
+                    <th className="py-3 pr-3">Referred user</th>
+                    <th className="py-3 pr-3">Paid by user</th>
+                    <th className="py-3 pr-3">Commission</th>
+                    <th className="py-3 pr-3">Status</th>
+                    <th className="py-3 pr-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F1F5F9]">
+                  {rewards.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-[#64748B]">No pending referral payouts.</td>
+                    </tr>
+                  ) : (
+                    rewards.map((reward) => (
+                      <tr key={reward.id}>
+                        <td className="py-3 pr-3 font-medium text-[#0F172A]">{reward.payout_month}</td>
+                        <td className="py-3 pr-3 text-[#64748B]">{reward.referrer_user_id}</td>
+                        <td className="py-3 pr-3 text-[#64748B]">{reward.referred_user_id}</td>
+                        <td className="py-3 pr-3 text-[#0F172A]">Rs {(reward.amount_paid / 100).toFixed(2)}</td>
+                        <td className="py-3 pr-3 font-semibold text-[#16A34A]">Rs {(reward.commission_amount / 100).toFixed(2)}</td>
+                        <td className="py-3 pr-3">
+                          <Badge variant={reward.status === "approved" ? "success" : "warning"}>{reward.status || "pending"}</Badge>
+                        </td>
+                        <td className="py-3 pr-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => markRewardPaid(reward.id)}
+                            className="rounded-lg bg-[#1E3A8A] px-3 py-2 text-xs font-semibold text-white hover:bg-[#162D6B]"
+                          >
+                            Mark paid
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
       </div>

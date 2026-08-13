@@ -5,7 +5,16 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(timeout 15)"
+      "Bash(timeout 15)",
+      "Bash(curl -s -H \"Host: ca.localhost:3000\" http://localhost:3000/)",
+      "Bash(curl -s -H \"Host: ca.localhost:3000\" http://localhost:3000/auth/login -o /tmp/login.html)",
+      "Read(//tmp/**)",
+      "Bash(getent hosts *)",
+      "Bash(nslookup ca.localhost)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://ca.localhost:3000/ --connect-timeout 3)",
+      "Bash(curl -s --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/ -o /tmp/ca-root.html -w \"%{http_code}\\\\n\")",
+      "Bash(curl -v --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/)",
+      "Bash(curl -s --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/ -o /tmp/ca-root2.html -w \"%{http_code}\\\\n\")"
     ]
   }
 }

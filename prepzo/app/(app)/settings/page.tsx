@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   User, BookOpen, SlidersHorizontal, CreditCard, HelpCircle,
   ChevronRight, Sun, Moon, Monitor, Trash2, LogOut, AlertTriangle,
-  Check, Shield, Bell, Save, Crown,
+  Check, Shield, Bell, Save, Crown, Copy, Gift,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -24,6 +24,8 @@ interface Prefs {
   flashcardGoal: number;
   flashcardRecallFrequency: string;
   speedModeInterval: number;
+  recallSpeedModeInterval: number;
+  reviewSpeedModeInterval: number;
   difficulty: string;
   showExplanation: string;
   randomizeOrder: boolean;
@@ -43,6 +45,8 @@ const DEFAULT_PREFS: Prefs = {
   flashcardGoal: 5,
   flashcardRecallFrequency: "daily",
   speedModeInterval: 5,
+  recallSpeedModeInterval: 5,
+  reviewSpeedModeInterval: 7,
   difficulty: "mixed",
   showExplanation: "immediate",
   randomizeOrder: true,
@@ -69,6 +73,10 @@ function getInitialPrefs(): Prefs {
       flashcardGoal: parsed.flashcardGoal || parsed.newCardsPerDay || DEFAULT_PREFS.flashcardGoal,
       flashcardRecallFrequency:
         parsed.flashcardRecallFrequency || parsed.recallFrequency || DEFAULT_PREFS.flashcardRecallFrequency,
+      recallSpeedModeInterval:
+        parsed.recallSpeedModeInterval || parsed.speedModeInterval || DEFAULT_PREFS.recallSpeedModeInterval,
+      reviewSpeedModeInterval:
+        parsed.reviewSpeedModeInterval || parsed.speedModeInterval || DEFAULT_PREFS.reviewSpeedModeInterval,
       newCardsPerDay: parsed.newCardsPerDay || parsed.flashcardGoal || DEFAULT_PREFS.newCardsPerDay,
     };
   } catch {
@@ -111,11 +119,16 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [sendingEmailChange, setSendingEmailChange] = useState(false);
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
   const [premiumFeature, setPremiumFeature] = useState("Prepzo Pro");
 
   const [name, setName] = useState("");
   const [dailyGoal, setDailyGoal] = useState(20);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -133,6 +146,13 @@ export default function SettingsPage() {
         }
       }
     });
+
+    fetch("/api/referrals/me")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.referral_code?.code) setReferralCode(data.referral_code.code);
+      })
+      .catch(() => {});
   }, []);
 
   // Merge pending into saved prefs
@@ -195,7 +215,7 @@ export default function SettingsPage() {
     const supabase = createClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ name, exam: "NEET", daily_goal: dailyGoal })
+      .update({ name, daily_goal: dailyGoal })
       .eq("id", profile.id);
     setLoading(false);
     if (error) { toast.error("Failed to save profile"); return; }
@@ -211,11 +231,46 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount() {
     if (!deleteConfirm) { setDeleteConfirm(true); return; }
-    setLoading(true);
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to delete account");
+
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      toast.success("Account deleted");
+      router.push("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete account");
+      setDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function submitEmailChange() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+    setSendingEmailChange(true);
     const supabase = createClient();
-    await supabase.auth.signOut();
-    toast.success("Account deletion requested. Our team will process it within 24 hours.");
-    router.push("/");
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    setSendingEmailChange(false);
+    if (error) {
+      toast.error(error.message || "Failed to start email change");
+      return;
+    }
+    toast.success(`Confirmation link sent to ${newEmail} — click it to finish the change`);
+    setChangingEmail(false);
+    setNewEmail("");
+  }
+
+  async function copyReferralCode() {
+    if (!referralCode) return;
+    await navigator.clipboard.writeText(referralCode);
+    toast.success("Referral code copied");
   }
 
   return (
@@ -308,7 +363,25 @@ export default function SettingsPage() {
                       }
                     }} />
                   <SettingsRow icon={Bell} label="Change Email" sublabel="Update your email address"
-                    onClick={() => toast("Contact support to change your email")} />
+                    onClick={() => setChangingEmail((v) => !v)} />
+                  {changingEmail && (
+                    <div className="ml-4 flex gap-2 rounded-xl bg-[#F8FAFF] p-3">
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="New email address"
+                        className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm focus:border-[#1E3A8A] focus:outline-none"
+                      />
+                      <button
+                        onClick={submitEmailChange}
+                        disabled={sendingEmailChange || !newEmail.trim()}
+                        className="rounded-lg bg-[#1E3A8A] px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-[#162D6B] disabled:opacity-50"
+                      >
+                        {sendingEmailChange ? "Sending..." : "Send link"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
 
@@ -325,18 +398,20 @@ export default function SettingsPage() {
                   <AlertTriangle size={18} className="text-[#DC2626] shrink-0 mt-0.5" />
                   <div>
                     <h2 className="text-base font-bold text-[#DC2626]">Delete Account</h2>
-                    <p className="text-xs text-[#64748B] mt-1">Permanently deletes all your data. Cannot be undone.</p>
+                    <p className="text-xs text-[#64748B] mt-1">
+                      This immediately and permanently deletes your account and all your data. This cannot be undone.
+                    </p>
                   </div>
                 </div>
                 {deleteConfirm && (
                   <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-xl p-3 mb-3 text-sm text-[#DC2626]">
-                    Are you sure? Tap again to confirm deletion.
+                    Are you sure? Tap again to permanently delete your account.
                   </div>
                 )}
-                <button onClick={handleDeleteAccount} disabled={loading}
+                <button onClick={handleDeleteAccount} disabled={deleting}
                   className="px-5 py-2.5 rounded-xl border-2 border-[#DC2626] text-[#DC2626] text-sm font-semibold hover:bg-[#FEF2F2] transition-all disabled:opacity-60 flex items-center gap-2">
                   <Trash2 size={14} />
-                  {deleteConfirm ? "Confirm Delete" : "Delete Account"}
+                  {deleting ? "Deleting..." : deleteConfirm ? "Confirm Delete" : "Delete Account"}
                 </button>
               </Card>
             </>
@@ -408,12 +483,12 @@ export default function SettingsPage() {
 
               <Card>
                 <h2 className="text-base font-bold text-[#0F172A] mb-1">Daily Flashcard Goal</h2>
-                <p className="text-xs text-[#64748B] mb-4">Max new flashcards introduced in a single session.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[5, 10].map((v) => {
-                    const isPro = v === 10 && profile?.plan !== "paid";
+                <p className="text-xs text-[#64748B] mb-4">Flashcards you want in each session.</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[5, 10, 15, 20].map((v) => {
+                    const isPro = v > 5 && profile?.plan !== "paid";
                     return (
-                      <button key={v} onClick={() => isPro ? openPremiumModal(`${v} flashcards per day`) : updateStudy({ flashcardGoal: v, newCardsPerDay: v })}
+                      <button key={v} onClick={() => isPro ? openPremiumModal(`${v} flashcards per session`) : updateStudy({ flashcardGoal: v, newCardsPerDay: v })}
                         className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all flex items-center justify-center gap-1 ${
                           studyPrefs.flashcardGoal === v
                             ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]"
@@ -492,6 +567,54 @@ export default function SettingsPage() {
               </Card>
 
               <Card>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-base font-bold text-[#0F172A]">Recall Deck Speed</h2>
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#D97706] text-xs font-semibold">
+                    <Crown size={10} /> Pro
+                  </span>
+                </div>
+                <p className="text-xs text-[#64748B] mb-4">Auto flip and file recall flashcards during Speed Mode.</p>
+                {profile?.plan !== "paid" ? (
+                  <button onClick={() => openPremiumModal("Recall deck Speed Mode")} className="flex items-center gap-2 text-sm text-[#1E3A8A] font-semibold underline">
+                    <Crown size={14} className="text-[#D97706]" /> Upgrade to unlock Recall Speed
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {[3, 5, 7].map((s) => (
+                      <button key={s} onClick={() => updatePractice({ recallSpeedModeInterval: s })}
+                        className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${practicePrefs.recallSpeedModeInterval === s ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
+                        {s}s
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-base font-bold text-[#0F172A]">Review Deck Speed</h2>
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#D97706] text-xs font-semibold">
+                    <Crown size={10} /> Pro
+                  </span>
+                </div>
+                <p className="text-xs text-[#64748B] mb-4">Auto flip and file review flashcards during Speed Mode.</p>
+                {profile?.plan !== "paid" ? (
+                  <button onClick={() => openPremiumModal("Review deck Speed Mode")} className="flex items-center gap-2 text-sm text-[#1E3A8A] font-semibold underline">
+                    <Crown size={14} className="text-[#D97706]" /> Upgrade to unlock Review Speed
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {[5, 7, 10].map((s) => (
+                      <button key={s} onClick={() => updatePractice({ reviewSpeedModeInterval: s })}
+                        className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${practicePrefs.reviewSpeedModeInterval === s ? "border-[#1E3A8A] bg-[#DBEAFE] text-[#1E3A8A]" : "border-[#E2E8F0] text-[#64748B] hover:border-[#3B5FBF]"}`}>
+                        {s}s
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card>
                 <h2 className="text-base font-bold text-[#0F172A] mb-1">Question Difficulty</h2>
                 <p className="text-xs text-[#64748B] mb-4">Default difficulty mix for quiz sessions.</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -549,6 +672,30 @@ export default function SettingsPage() {
           {/* ── SUBSCRIPTION ── */}
           {activeSection === "subscription" && (
             <>
+              <Card>
+                <div className="mb-4 flex items-center gap-2">
+                  <Gift size={18} className="text-[#1E3A8A]" />
+                  <h2 className="text-base font-bold text-[#0F172A]">Referral Code</h2>
+                </div>
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                  <p className="text-xs font-semibold text-[#64748B]">Friend gets 10% off. You earn 20% commission for one year after they pay.</p>
+                  <div className="mt-3 flex gap-2">
+                    <div className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 font-[family-name:var(--font-dm-mono)] text-sm font-bold tracking-wide text-[#0F172A]">
+                      {referralCode || "Loading..."}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={copyReferralCode}
+                      disabled={!referralCode}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1E3A8A] px-4 text-sm font-semibold text-white hover:bg-[#162D6B] disabled:opacity-60"
+                    >
+                      <Copy size={15} />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </Card>
+
               <Card>
                 <h2 className="text-base font-bold text-[#0F172A] mb-4">Current Plan</h2>
                 <div className={`rounded-xl p-4 mb-4 ${profile?.plan === "paid" ? "bg-[#1E3A8A] text-white" : "bg-[#F8FAFF] border border-[#E2E8F0]"}`}>

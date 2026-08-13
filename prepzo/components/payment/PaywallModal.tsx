@@ -26,10 +26,10 @@ export function PaywallModal({ open, onClose }: PaywallModalProps) {
         <div className="bg-[#F8FAFF] rounded-xl p-4 mb-6 text-left">
           <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-3">What you get with Pro</p>
           {[
-            "Full access to NEET MCQs",
+            "Full access MCQs + Flashcard",
             "Full NEET syllabus coverage",
             "Advanced Recall with spaced repetition",
-            "Speed Mode flashcards",
+            "Speed Mode",
             "Detailed analytics & weak topics",
           ].map((f) => (
             <div key={f} className="flex items-center gap-2 py-1.5">

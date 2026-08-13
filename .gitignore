@@ -1,0 +1,7 @@
+.vercel
+.env*.local
+
+# Scratch / local-only, not part of the deployed app
+/neet-import/
+/prepzo - Copy/
+/tag_neet_2024_pyq.py

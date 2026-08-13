@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { fetchPrioritizedQuestions, getTodayQuestionCount, recordAnswer, FREE_DAILY_LIMIT } from "@/lib/questions";
+import { fetchPrioritizedQuestions, getTodayQuestionCount, recordAnswer, FREE_DAILY_LIMIT, PRO_SESSION_LIMIT } from "@/lib/questions";
+import { isCorrectOption } from "@/lib/answers";
 import { getISTDate } from "@/lib/utils";
 import type { Question } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +12,18 @@ interface UseQuizOptions {
   exam: string;
   subject?: string;
   topic?: string;
+  chapter?: string;
+  difficulty?: string;
+  pyqYear?: number;
+  pyqOnly?: boolean;
+  fullPaper?: boolean;
+  sessionLimit?: number;
+  timerDurationSeconds?: number;
+  autoAdvanceOnTimeout?: boolean;
+  autoAdvanceOnAnswer?: boolean;
+  autoAdvanceDelayMs?: number;
+  autoEndFullPaperOnLastAnswer?: boolean;
+  disableQuestionTimer?: boolean;
   plan: "free" | "paid";
   dailyGoal?: number;
 }
@@ -19,12 +32,11 @@ interface AnswerRecord {
   questionId: string;
   correct: boolean;
   skipped: boolean;
+  selectedOption: string | null;
   timeSeconds: number;
   topic: string | null;
   subject: string;
 }
-
-const DAILY_MCQ_KEY = "prepzo_daily_mcqs";
 
 function getMcqRecallFrequency(): "daily" | "every2days" | "weekly" {
   try {
@@ -35,26 +47,36 @@ function getMcqRecallFrequency(): "daily" | "every2days" | "weekly" {
   }
 }
 
-function getDailySession(exam: string, subject?: string, topic?: string): { ids: string[] } | null {
+function getMcqSessionGoal(plan: "free" | "paid", dailyGoal?: number): number {
+  if (plan === "free") return FREE_DAILY_LIMIT;
   try {
-    const raw = JSON.parse(localStorage.getItem(DAILY_MCQ_KEY) || "{}");
-    const key = `${exam}:${subject || ""}:${topic || ""}`;
-    if (raw.date === getISTDate() && raw[key]) return { ids: raw[key] };
-    return null;
-  } catch { return null; }
-}
-
-function saveDailySession(exam: string, subject: string | undefined, topic: string | undefined, ids: string[]) {
-  try {
-    const key = `${exam}:${subject || ""}:${topic || ""}`;
-    const existing = JSON.parse(localStorage.getItem(DAILY_MCQ_KEY) || "{}");
-    const date = getISTDate();
-    const updated = existing.date === date ? { ...existing, [key]: ids } : { date, [key]: ids };
-    localStorage.setItem(DAILY_MCQ_KEY, JSON.stringify(updated));
+    const prefs = JSON.parse(localStorage.getItem("prepzo_prefs") || "{}");
+    const savedGoal = Number(prefs.mcqDailyGoal);
+    if (Number.isFinite(savedGoal) && savedGoal > 0) return savedGoal;
   } catch {}
+  return dailyGoal && dailyGoal > 0 ? dailyGoal : PRO_SESSION_LIMIT;
 }
 
-export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQuizOptions) {
+export function useQuiz({
+  userId,
+  exam,
+  subject,
+  topic,
+  chapter,
+  difficulty,
+  pyqYear,
+  pyqOnly,
+  fullPaper = false,
+  sessionLimit,
+  timerDurationSeconds,
+  autoAdvanceOnTimeout = false,
+  autoAdvanceOnAnswer = false,
+  autoAdvanceDelayMs = 250,
+  autoEndFullPaperOnLastAnswer = true,
+  disableQuestionTimer = false,
+  plan,
+  dailyGoal,
+}: UseQuizOptions) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -66,6 +88,7 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
   const [goalReached, setGoalReached] = useState(false);
 
   const mcqTimerDuration = (() => {
+    if (timerDurationSeconds && timerDurationSeconds > 0) return timerDurationSeconds;
     try {
       const prefs = JSON.parse(localStorage.getItem("prepzo_prefs") || "{}");
       return typeof prefs.mcqTimer === "number" ? prefs.mcqTimer : 30;
@@ -74,10 +97,18 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
   const [timeLeft, setTimeLeft] = useState(mcqTimerDuration);
   const [questionStartTime, setQuestionStartTime] = useState(() => Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipRef = useRef<() => Promise<void>>(async () => {});
+  const answersRef = useRef<AnswerRecord[]>([]);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     const duration = (() => {
+      if (timerDurationSeconds && timerDurationSeconds > 0) return timerDurationSeconds;
       try {
         const prefs = JSON.parse(localStorage.getItem("prepzo_prefs") || "{}");
         return typeof prefs.mcqTimer === "number" ? prefs.mcqTimer : 30;
@@ -89,48 +120,64 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timerRef.current!);
-          handleAutoSkip();
+          void autoSkipRef.current();
           return 0;
         }
         return t - 1;
       });
     }, 1000);
-  }, []); // eslint-disable-line
+  }, [timerDurationSeconds]);
 
   const loadQuestions = useCallback(async () => {
-    setLoading(true);
-    const supabase = createClient();
-
-    // Check for today's saved session (same questions same day)
-    const dailySession = getDailySession(exam, subject, topic);
-    let newQuestions: Question[] = [];
-
-    if (dailySession && dailySession.ids.length > 0) {
-      // Same day: load today's assigned questions
-      const { data } = await supabase
-        .from("questions")
-        .select("*")
-        .in("id", dailySession.ids)
-        .eq("is_active", true);
-      newQuestions = (data || []) as Question[];
-    } else {
-      // New day or first load: fetch prioritized questions
-      const limit = plan === "free" ? FREE_DAILY_LIMIT : Math.max(dailyGoal || 20, 30);
-      newQuestions = await fetchPrioritizedQuestions({
-        userId, exam, subject, topic, limit, seenIds: [],
-      });
-      // Save today's assignment
-      saveDailySession(exam, subject, topic, newQuestions.map((q) => q.id));
+    if (!userId) {
+      setLoading(true);
+      return;
     }
 
+    setLoading(true);
+
+    let limit = fullPaper ? sessionLimit || 180 : getMcqSessionGoal(plan, dailyGoal);
+    if (plan === "free" && !fullPaper) {
+      const count = await getTodayQuestionCount(userId, exam);
+      limit = Math.max(0, FREE_DAILY_LIMIT - count);
+      if (limit <= 0) {
+        setQuestions([]);
+        setLimitReached(true);
+        setLoading(false);
+        return;
+      }
+    }
+
+    const newQuestions = await fetchPrioritizedQuestions({
+      userId,
+      exam,
+      subject,
+      topic,
+      chapter,
+      difficulty,
+      pyqYear,
+      pyqOnly,
+      limit,
+      seenIds: [],
+      plan,
+      fullPaper,
+    });
+
     setQuestions(newQuestions);
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setAnswered(false);
+    setAnswers([]);
+    setSessionEnded(false);
+    setGoalReached(false);
     setLoading(false);
-  }, [userId, exam, subject, topic, plan, dailyGoal]);
+  }, [userId, exam, subject, topic, chapter, difficulty, pyqYear, pyqOnly, fullPaper, sessionLimit, plan, dailyGoal]);
 
   useEffect(() => {
     const init = async () => {
-      if (plan === "free") {
-        const count = await getTodayQuestionCount(userId);
+      if (!userId) return;
+      if (plan === "free" && !fullPaper) {
+        const count = await getTodayQuestionCount(userId, exam);
         if (count >= FREE_DAILY_LIMIT) {
           setLimitReached(true);
           setLoading(false);
@@ -140,10 +187,10 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
       await loadQuestions();
     };
     init();
-  }, [plan, userId, loadQuestions]);
+  }, [plan, pyqOnly, pyqYear, userId, loadQuestions, fullPaper, exam]);
 
   useEffect(() => {
-    if (!loading && questions.length > 0 && !sessionEnded) {
+    if (!disableQuestionTimer && !loading && questions.length > 0 && !sessionEnded) {
       const timer = setTimeout(() => startTimer(), 0);
       return () => {
         clearTimeout(timer);
@@ -151,14 +198,14 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
       };
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [currentIndex, loading, questions.length, sessionEnded, startTimer]);
+  }, [currentIndex, disableQuestionTimer, loading, questions.length, sessionEnded, startTimer]);
 
   async function recordCurrentAnswer(option: string | null) {
     const question = questions[currentIndex];
     if (!question) return null;
 
     const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
-    const isCorrect = option === question.correct_option;
+    const isCorrect = isCorrectOption(option, question.correct_option);
 
     await recordAnswer({
       userId,
@@ -166,12 +213,17 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
       isCorrect,
       timeSeconds: elapsed,
       recallFrequency: getMcqRecallFrequency(),
+      isPyq: Boolean(pyqOnly),
+      pyqYear,
+      selectedOption: option,
+      skipped: option === null,
     });
 
     return {
       questionId: question.id,
       correct: isCorrect,
       skipped: option === null,
+      selectedOption: option,
       timeSeconds: elapsed,
       topic: question.topic,
       subject: question.subject,
@@ -180,23 +232,41 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
 
   async function handleAutoSkip() {
     if (!answered && questions[currentIndex]) {
+      if (timerRef.current) clearInterval(timerRef.current);
       const answer = await recordCurrentAnswer(null);
-      if (answer) setAnswers((prev) => [...prev, answer]);
-      setAnswered(true);
+      const nextAnswers = answer ? [...answers, answer] : answers;
+      if (answer) setAnswers(nextAnswers);
       setSelectedOption(null);
+
+      if (autoAdvanceOnTimeout) {
+        if (currentIndex >= questions.length - 1) {
+          await endSession(nextAnswers);
+          return;
+        }
+        setAnswered(false);
+        setCurrentIndex((i) => i + 1);
+        return;
+      }
+
+      setAnswered(true);
     }
   }
+
+  useEffect(() => {
+    autoSkipRef.current = handleAutoSkip;
+  });
 
   async function handleAnswer(option: string) {
     if (answered) return;
     if (timerRef.current) clearInterval(timerRef.current);
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
 
     setSelectedOption(option);
     setAnswered(true);
 
     // Check daily limit for free users
-    if (plan === "free") {
-      const count = await getTodayQuestionCount(userId);
+    if (plan === "free" && !fullPaper) {
+      const count = await getTodayQuestionCount(userId, exam);
       if (count >= FREE_DAILY_LIMIT) {
         setLimitReached(true);
         return;
@@ -209,37 +279,100 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
     const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
 
-    // Check if daily goal reached
-    if (dailyGoal && newAnswers.length >= dailyGoal) {
+    if (fullPaper && autoEndFullPaperOnLastAnswer && currentIndex >= questions.length - 1) {
+      await endSession(newAnswers);
+      return;
+    }
+
+    if (autoAdvanceOnAnswer && currentIndex < questions.length - 1) {
+      const nextIndex = currentIndex + 1;
+      const nextQuestion = questions[nextIndex];
+      const existing = newAnswers.find((item) => item.questionId === nextQuestion.id);
+      autoAdvanceRef.current = setTimeout(() => {
+        setSelectedOption(existing?.selectedOption || null);
+        setAnswered(Boolean(existing));
+        setQuestionStartTime(Date.now());
+        setCurrentIndex(nextIndex);
+      }, autoAdvanceDelayMs);
+    }
+
+    const sessionTarget = fullPaper ? questions.length : plan === "paid" ? getMcqSessionGoal(plan, dailyGoal) : dailyGoal;
+    if (sessionTarget && newAnswers.length >= sessionTarget) {
       setGoalReached(true);
     }
   }
 
+  async function markNotAttempted() {
+    if (answered) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+
+    setSelectedOption(null);
+    setAnswered(true);
+
+    const answer = await recordCurrentAnswer(null);
+    if (!answer) return;
+
+    const newAnswers = [...answers, answer];
+    setAnswers(newAnswers);
+
+    if (autoAdvanceOnAnswer && currentIndex < questions.length - 1) {
+      const nextIndex = currentIndex + 1;
+      const nextQuestion = questions[nextIndex];
+      const existing = newAnswers.find((item) => item.questionId === nextQuestion.id);
+      autoAdvanceRef.current = setTimeout(() => {
+        setSelectedOption(existing?.selectedOption || null);
+        setAnswered(Boolean(existing));
+        setQuestionStartTime(Date.now());
+        setCurrentIndex(nextIndex);
+      }, autoAdvanceDelayMs);
+    }
+  }
+
   async function nextQuestion() {
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     if (currentIndex >= questions.length - 1) {
       await endSession();
       return;
     }
-    setSelectedOption(null);
-    setAnswered(false);
-    setCurrentIndex((i) => i + 1);
+    jumpToQuestion(currentIndex + 1);
   }
 
-  async function endSession() {
+  function previousQuestion() {
+    if (currentIndex <= 0) return;
+    jumpToQuestion(currentIndex - 1);
+  }
+
+  function jumpToQuestion(index: number) {
+    if (index < 0 || index >= questions.length) return;
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    const question = questions[index];
+    const existing = answersRef.current.find((answer) => answer.questionId === question.id);
+    setSelectedOption(existing?.selectedOption || null);
+    setAnswered(Boolean(existing));
+    setQuestionStartTime(Date.now());
+    setCurrentIndex(index);
+  }
+
+  async function endSession(finalAnswers = answersRef.current) {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     setSessionEnded(true);
 
     const supabase = createClient();
-    const correct = answers.filter((a) => a.correct).length;
-    const skipped = answers.filter((a) => a.skipped).length;
-    const wrong = answers.filter((a) => !a.correct && !a.skipped).length;
-    const avgTime = answers.length > 0
-      ? Math.round(answers.reduce((s, a) => s + a.timeSeconds, 0) / answers.length)
+    const correct = finalAnswers.filter((a) => a.correct).length;
+    const skipped = finalAnswers.filter((a) => a.skipped).length;
+    const wrong = finalAnswers.filter((a) => !a.correct && !a.skipped).length;
+    const avgTime = finalAnswers.length > 0
+      ? Math.round(finalAnswers.reduce((s, a) => s + a.timeSeconds, 0) / finalAnswers.length)
       : 0;
 
     await supabase.from("quiz_sessions").insert({
       user_id: userId, exam, subject: subject || null,
-      total_questions: answers.length, correct, wrong,
+      topic: topic || null,
+      is_pyq: Boolean(pyqOnly),
+      pyq_year: pyqYear || null,
+      total_questions: finalAnswers.length, correct, wrong,
       skipped,
       avg_time_seconds: avgTime,
     });
@@ -264,6 +397,47 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
       .eq("id", userId);
   }
 
+  async function endSessionWithUnattempted() {
+    const existing = answersRef.current;
+    const answeredIds = new Set(existing.map((answer) => answer.questionId));
+    const skippedAnswers: AnswerRecord[] = questions
+      .filter((question) => !answeredIds.has(question.id))
+      .map((question, index) => ({
+        questionId: question.id,
+        correct: false,
+        skipped: true,
+        selectedOption: null,
+        timeSeconds: index === 0 ? Math.max(0, Math.round((Date.now() - questionStartTime) / 1000)) : 0,
+        topic: question.topic,
+        subject: question.subject,
+      }));
+
+    await Promise.all(
+      skippedAnswers.map((answer) =>
+        recordAnswer({
+          userId,
+          questionId: answer.questionId,
+          isCorrect: false,
+          timeSeconds: answer.timeSeconds,
+          recallFrequency: getMcqRecallFrequency(),
+          isPyq: Boolean(pyqOnly),
+          pyqYear,
+          selectedOption: null,
+          skipped: true,
+        })
+      )
+    );
+
+    const finalAnswers = [...existing, ...skippedAnswers];
+    setAnswers(finalAnswers);
+    await endSession(finalAnswers);
+  }
+
+  async function startNewSession() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    await loadQuestions();
+  }
+
   const currentQuestion = questions[currentIndex] || null;
   const correct = answers.filter((a) => a.correct).length;
   const skipped = answers.filter((a) => a.skipped).length;
@@ -283,10 +457,17 @@ export function useQuiz({ userId, exam, subject, topic, plan, dailyGoal }: UseQu
     limitReached,
     goalReached,
     timeLeft,
+    timerDuration: mcqTimerDuration,
     answers,
     stats: { correct, wrong, skipped, accuracy, score: Math.round(score * 100) / 100, total: answers.length },
+    sessionLimit: fullPaper ? questions.length || sessionLimit || 180 : plan === "paid" ? getMcqSessionGoal(plan, dailyGoal) : Math.min(FREE_DAILY_LIMIT, questions.length || FREE_DAILY_LIMIT),
     handleAnswer,
+    markNotAttempted,
     nextQuestion,
+    previousQuestion,
+    jumpToQuestion,
     endSession,
+    endSessionWithUnattempted,
+    startNewSession,
   };
 }

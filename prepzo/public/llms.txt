@@ -1,0 +1,22 @@
+# Prepzo
+
+Prepzo is a NEET preparation platform for students in India.
+
+## Public study tools
+
+- NEET 2026 Countdown: https://www.prepzo.study/tools/neet-countdown
+- Free NEET Pomodoro Timer: https://www.prepzo.study/tools/pomodoro
+- Study Tools Directory: https://www.prepzo.study/tools
+
+The countdown tracks the official NEET UG 2026 re-examination scheduled for June 21, 2026.
+The Pomodoro timer supports adjustable focus sessions, short and long breaks, daily study goals,
+local progress saving, light mode, and dark mode.
+
+## Official exam source
+
+- National Testing Agency NEET website: https://neet.nta.nic.in/
+
+## About Prepzo
+
+Prepzo provides NEET MCQ practice, flashcards, spaced repetition, progress tracking, and free
+browser-based study tools.

@@ -138,7 +138,7 @@ prepzo/
 
 | Feature | Free | Pro (₹99/mo) |
 |---------|------|--------------|
-| Daily MCQs | 15/day | Unlimited |
+| Daily MCQs | 15/day | Full access |
 | Exams | 1 | NEET |
 | Flashcards | Basic | Speed Mode |
 | Analytics | Basic | Full |

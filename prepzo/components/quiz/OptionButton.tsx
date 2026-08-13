@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface OptionButtonProps {
   label: string;
   text: string;
+  imageUrl?: string | null;
   selected: boolean;
   correct?: boolean;
   wrong?: boolean;
@@ -12,7 +13,10 @@ interface OptionButtonProps {
   onClick: () => void;
 }
 
-export function OptionButton({ label, text, selected, correct, wrong, disabled, onClick }: OptionButtonProps) {
+export function OptionButton({ label, text, imageUrl, selected, correct, wrong, disabled, onClick }: OptionButtonProps) {
+  const normalizedText = text?.trim();
+  const visibleText = imageUrl && normalizedText === "[See option image]" ? "" : normalizedText;
+
   return (
     <button
       onClick={onClick}
@@ -35,7 +39,19 @@ export function OptionButton({ label, text, selected, correct, wrong, disabled, 
       )}>
         {correct ? "✓" : wrong ? "✗" : label}
       </span>
-      <span className="flex-1 leading-snug">{text}</span>
+      <span className="flex-1 leading-snug">
+        {visibleText && <span>{visibleText}</span>}
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={`Option ${label}`}
+            className={cn(
+              "max-h-64 w-auto max-w-full rounded-lg border border-[#E2E8F0] bg-white object-contain",
+              visibleText ? "mt-2" : "mt-0",
+            )}
+          />
+        )}
+      </span>
     </button>
   );
 }

@@ -11,8 +11,12 @@ export function TimerRing({ timeLeft, total = 30, size = 56 }: TimerRingProps) {
   const circumference = 2 * Math.PI * radius;
   const progress = timeLeft / total;
   const dashOffset = circumference * (1 - progress);
+  const isLongTimer = total > 120;
+  const displayTime = isLongTimer ? `${Math.ceil(timeLeft / 60)}m` : timeLeft;
 
-  const color = timeLeft > 10 ? "#1E3A8A" : timeLeft > 5 ? "#D97706" : "#DC2626";
+  const color = isLongTimer
+    ? timeLeft > 10 * 60 ? "#1E3A8A" : timeLeft > 5 * 60 ? "#D97706" : "#DC2626"
+    : timeLeft > 10 ? "#1E3A8A" : timeLeft > 5 ? "#D97706" : "#DC2626";
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
@@ -48,7 +52,7 @@ export function TimerRing({ timeLeft, total = 30, size = 56 }: TimerRingProps) {
           className="font-[family-name:var(--font-dm-mono)] font-bold text-sm leading-none"
           style={{ color }}
         >
-          {timeLeft}
+          {displayTime}
         </span>
       </div>
     </div>

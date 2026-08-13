@@ -10,17 +10,22 @@
     "seed": "ts-node --project tsconfig.seed.json -r tsconfig-paths/register scripts/seed.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.3",
     "clsx": "^2.1.1",
     "dotenv": "^16.6.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.8.0",
     "next": "^16.2.7",
+    "pdf-lib": "^1.17.1",
     "razorpay": "^2.9.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

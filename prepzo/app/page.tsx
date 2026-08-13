@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Atom,
   Check,
@@ -14,11 +15,108 @@ import {
   Timer,
   TrendingUp,
   Zap,
+  Loader2,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { loadRazorpayScript, type PlanKey, type RazorpayPaymentResponse } from "@/lib/razorpay";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("code") || params.has("error")) {
+      const callbackUrl = `/auth/callback${window.location.search}`;
+      window.location.replace(callbackUrl);
+    }
+  }, []);
+
+  async function handleProCheckout(plan: PlanKey) {
+    setLoadingPlan(plan);
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/upgrade?plan=${plan}`);
+        return;
+      }
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error("Failed to load payment gateway. Please try again.");
+        return;
+      }
+
+      const res = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const order = await res.json();
+
+      if (!res.ok || !order.order_id) {
+        toast.error(order.error || "Failed to create order");
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Prepzo",
+        description: order.description,
+        order_id: order.order_id,
+        prefill: {
+          email: user.email || "",
+          name: String(user.user_metadata?.full_name || user.user_metadata?.name || ""),
+        },
+        theme: { color: "#1E3A8A" },
+        handler: async (response: RazorpayPaymentResponse) => {
+          const verifyRes = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          const result = await verifyRes.json();
+
+          if (result.success) {
+            toast.success("Payment successful! Welcome to Pro");
+            window.location.href = "/dashboard";
+          } else {
+            toast.error(result.error || "Payment verification failed. Please contact support.");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoadingPlan(null);
+            toast.error("Payment cancelled.");
+          },
+        },
+      });
+
+      rzp.on("payment.failed", (response) => {
+        setLoadingPlan(null);
+        toast.error(response.error?.description || "Payment failed. Please try again.");
+      });
+
+      rzp.open();
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-white text-[#0F172A]">
+    <div className="landing-page min-h-screen bg-white text-[#0F172A]">
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -29,6 +127,12 @@ export default function LandingPage() {
             <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Features
             </a>
+            <Link href="/tools" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
+              Tools
+            </Link>
+            <Link href="/blog" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
+              Blog
+            </Link>
             <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Pricing
             </a>
@@ -53,7 +157,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
 
             {/* LEFT: Text */}
-            <div className="flex-1 text-center md:text-left">
+            <div className="landing-hero-copy flex-1 text-center md:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#DBEAFE] border border-[#BFDBFE] text-[#1E3A8A] text-xs font-medium mb-7">
                 <span>✨</span>
                 Prep smarter
@@ -154,67 +258,51 @@ export default function LandingPage() {
             <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">Simple, Transparent Pricing</h2>
             <p className="text-[#64748B]">Start completely free Upgrade only when you&apos;re ready for advanced practice</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-stretch">
 
             {/* Free */}
-            <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-[var(--shadow-card)] p-7 flex flex-col">
-              <h3 className="text-lg font-bold text-[#0F172A] mb-1">Free</h3>
+            <div className="pricing-card-navy bg-[#1E3A8A] rounded-[14px] border border-[#1E3A8A] shadow-[0_8px_40px_rgba(30,58,138,0.28)] p-7 flex flex-col text-white">
+              <h3 className="text-lg font-bold text-white mb-1">Free</h3>
               <div className="flex items-end gap-1 mb-6">
-                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-[#0F172A]">₹0</span>
-                <span className="text-[#64748B] pb-1">/month</span>
+                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-white">₹0</span>
+                <span className="text-white/70 pb-1">/month</span>
               </div>
               <ul className="space-y-3 mb-7 flex-1">
                 {FREE_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-[#0F172A]">
-                    <Check size={14} className="text-[#64748B] shrink-0 mt-0.5" />{f}
+                  <li key={f} className="flex items-start gap-2 text-sm text-white">
+                    <Check size={14} className="text-white/70 shrink-0 mt-0.5" />{f}
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/signup" className="block w-full text-center py-3 rounded-xl border border-[#E2E8F0] text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all">
+              <Link href="/auth/signup" className="pricing-card-cta block w-full text-center py-3 rounded-xl bg-white text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all">
                 Get Started Free
               </Link>
             </div>
 
             {/* Pro Monthly */}
-            <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-[var(--shadow-card)] p-7 flex flex-col">
-              <h3 className="text-lg font-bold text-[#0F172A] mb-1">Pro Monthly</h3>
+            <div className="pricing-card-navy bg-[#1E3A8A] rounded-[14px] border border-[#1E3A8A] shadow-[0_8px_40px_rgba(30,58,138,0.28)] p-7 flex flex-col text-white">
+              <h3 className="text-lg font-bold text-white mb-1">Pro Monthly</h3>
               <div className="flex items-end gap-1 mb-6">
-                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-[#0F172A]">₹99</span>
-                <span className="text-[#64748B] pb-1">/month</span>
+                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-white">₹99</span>
+                <span className="text-white/70 pb-1">/month</span>
               </div>
-              <ul className="space-y-3 mb-7 flex-1">
-                {PRO_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-[#0F172A]">
-                    <Check size={14} className="text-[#16A34A] shrink-0 mt-0.5" />{f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth/signup" className="block w-full text-center py-3 rounded-xl border border-[#1E3A8A] text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all">
-                Get Pro Monthly
-              </Link>
-            </div>
-
-            {/* Pro Yearly — Best Value */}
-            <div className="relative bg-[#1E3A8A] rounded-[14px] shadow-[0_8px_40px_rgba(30,58,138,0.3)] p-7 text-white flex flex-col overflow-hidden">
-              <div className="absolute top-4 right-4">
-                <span className="bg-[#D97706] text-white text-xs font-bold px-3 py-1 rounded-full">BEST VALUE</span>
-              </div>
-              <h3 className="text-lg font-bold mb-1">Pro Yearly</h3>
-              <div className="flex items-end gap-1 mb-1">
-                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)]">₹799</span>
-                <span className="text-white/70 pb-1">/year</span>
-              </div>
-              <p className="text-white/60 text-xs mb-6">Just ₹67/month — save 2 months free</p>
               <ul className="space-y-3 mb-7 flex-1">
                 {PRO_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-white">
-                    <Check size={14} className="text-[#4ADE80] shrink-0 mt-0.5" />{f}
+                    <Check size={14} className="text-[#4ADE80] shrink-0 mt-0.5" />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/signup" className="block w-full text-center py-3 rounded-xl bg-white text-[#1E3A8A] text-sm font-semibold hover:bg-[#F8FAFF] transition-all">
-                Get Pro Yearly — Best Deal
-              </Link>
+              <button
+                type="button"
+                onClick={() => handleProCheckout("monthly")}
+                disabled={loadingPlan !== null}
+                className="pricing-card-cta flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-white text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all disabled:opacity-60"
+              >
+                {loadingPlan === "monthly" && <Loader2 size={16} className="animate-spin" />}
+                {loadingPlan === "monthly" ? "Opening checkout..." : "Get Pro Monthly"}
+              </button>
             </div>
 
           </div>
@@ -222,22 +310,58 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#E2E8F0] py-14">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
-          <div className="text-center">
+      <footer className="landing-footer border-t border-[#E2E8F0] py-14">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 text-center sm:px-6 md:flex-row md:items-start md:justify-between md:text-left">
+          <div className="flex min-w-[220px] flex-col items-center gap-1 md:items-start">
+            <span className="font-[family-name:var(--font-fraunces)] text-xl font-bold text-[#1E3A8A]">Prepzo</span>
+            <p className="mt-2 max-w-xs text-xs leading-5 text-[#64748B]">
+              Prepzo is an independent study platform and is not affiliated with NTA or NEET.
+            </p>
+            <p className="text-xs text-[#64748B]">Made for India students</p>
+          </div>
+
+          <div className="flex min-w-[220px] flex-col items-center gap-3 text-sm text-[#64748B] md:items-start">
             <p className="text-sm font-semibold text-[#0F172A]">Support</p>
-            <a href="mailto:support@prepzo.study" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-              support@prepzo.study
-            </a>
+            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">support@prepzo.study</a>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://www.linkedin.com/company/131964161/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Prepzo on LinkedIn"
+                className="grid h-9 w-9 place-items-center rounded-full border border-[#E2E8F0] text-[#64748B] transition-colors hover:border-[#1E3A8A] hover:text-[#1E3A8A]"
+              >
+                <LinkedInIcon />
+              </a>
+              <a
+                href="https://www.instagram.com/prepzo.study?igsh=eXpzNnAxazZva3ds"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Prepzo on Instagram"
+                className="grid h-9 w-9 place-items-center rounded-full border border-[#E2E8F0] text-[#64748B] transition-colors hover:border-[#1E3A8A] hover:text-[#1E3A8A]"
+              >
+                <InstagramIcon />
+              </a>
+            </div>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-4 text-sm font-medium text-[#64748B]">
-            <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
-            <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
-            <a href="#pricing" className="hover:text-[#0F172A] transition-colors">Pricing</a>
-          </div>
-          <div className="flex flex-wrap justify-center items-center gap-4 text-sm text-[#64748B]">
-            <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
-            <Link href="/privacy-policy" className="hover:text-[#0F172A] transition-colors">Privacy Policy</Link>
+
+          <div className="flex flex-1 justify-end">
+            <div className="grid gap-4 text-sm font-medium text-[#64748B] md:grid-cols-3 md:justify-items-end md:text-right">
+              <div className="flex flex-col gap-2">
+                <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
+                <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
+                <a href="#pricing" className="hover:text-[#0F172A] transition-colors">Pricing</a>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link href="/tools" className="hover:text-[#0F172A] transition-colors">Study Tools</Link>
+                <Link href="/blog" className="hover:text-[#0F172A] transition-colors">Blog</Link>
+                <Link href="/referral" className="hover:text-[#0F172A] transition-colors">Referral</Link>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
+                <Link href="/privacy-policy" className="hover:text-[#0F172A] transition-colors">Privacy Policy</Link>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
@@ -246,6 +370,22 @@ export default function LandingPage() {
 }
 
 // ── QUIZ MOCKUP WITH SUBJECT SCROLL ──────────────────────────────
+function LinkedInIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+      <path d="M6.94 8.98H3.56v10.78h3.38V8.98ZM5.25 4.24a1.96 1.96 0 1 0 0 3.92 1.96 1.96 0 0 0 0-3.92Zm14.5 9.34c0-3.25-1.73-4.76-4.04-4.76a3.49 3.49 0 0 0-3.15 1.73h-.05V8.98H9.27v10.78h3.37v-5.33c0-1.41.27-2.77 2.01-2.77 1.72 0 1.74 1.61 1.74 2.86v5.24h3.36v-6.18Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+      <path d="M7.7 2h8.6A5.7 5.7 0 0 1 22 7.7v8.6a5.7 5.7 0 0 1-5.7 5.7H7.7A5.7 5.7 0 0 1 2 16.3V7.7A5.7 5.7 0 0 1 7.7 2Zm0 2A3.7 3.7 0 0 0 4 7.7v8.6A3.7 3.7 0 0 0 7.7 20h8.6a3.7 3.7 0 0 0 3.7-3.7V7.7A3.7 3.7 0 0 0 16.3 4H7.7Zm4.3 3.25A4.75 4.75 0 1 1 12 16.75a4.75 4.75 0 0 1 0-9.5Zm0 2A2.75 2.75 0 1 0 12 14.75a2.75 2.75 0 0 0 0-5.5Zm5.05-2.45a1.11 1.11 0 1 1 0 2.22 1.11 1.11 0 0 1 0-2.22Z" />
+    </svg>
+  );
+}
+
 const SAMPLE_QUESTIONS = [
   {
     subject: "Physics",
@@ -394,15 +534,17 @@ const FEATURES = [
 const FREE_FEATURES = [
   "15 MCQs per day",
   "NEET practice track",
+  "PYQ coming soon",
   "5 flashcards per session",
   "Progress tracking",
   "Limited Recall Deck",
 ];
 
 const PRO_FEATURES = [
-  "Unlimited NEET MCQs",
+  "Full access MCQs + Flashcard",
+  "PYQ Practice coming soon",
   "Full NEET syllabus coverage",
-  "Full + Speed Mode flashcards",
+  "Speed Mode",
   "Detailed analytics",
   "Weak topic detection",
   "Full progress history",

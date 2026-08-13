@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Flame, BookOpen, Brain, BarChart2, Target, Layers, Crown } from "lucide-react";
+import { Flame, BookOpen, Brain, BarChart2, Target, Layers, Crown, BookOpenCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { TourOverlay } from "@/components/tour/TourOverlay";
-import { getSubjectsForExam } from "@/lib/utils";
+import { getSubjectsForExam, normalizeSubject } from "@/lib/utils";
 import type { Profile } from "@/lib/supabase/types";
 
 export default async function DashboardPage() {
@@ -28,10 +28,11 @@ export default async function DashboardPage() {
 
   const { data: todayProgressRaw } = await supabase
     .from("user_progress")
-    .select("deck_type, avg_time_seconds")
+    .select("deck_type, times_seen, times_correct, avg_time_seconds, questions!inner(exam)")
     .eq("user_id", user.id)
+    .eq("questions.exam", profile.exam)
     .gte("last_seen_at", today.toISOString());
-  const todayProgress = todayProgressRaw as Array<{ deck_type: string | null; avg_time_seconds: number | null }> | null;
+  const todayProgress = todayProgressRaw as Array<{ deck_type: string | null; times_seen: number | null; times_correct: number | null; avg_time_seconds: number | null }> | null;
 
   const { data: todayFlashcardsRaw } = await supabase
     .from("user_flashcard_progress")
@@ -39,27 +40,45 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .gte("last_seen_at", today.toISOString());
   const flashcardsDone = todayFlashcardsRaw?.length || 0;
-  const questionsDone = todayProgress?.length || 0;
-  const totalDoneToday = questionsDone + flashcardsDone;
-  const correctToday = todayProgress?.filter((p) => p.deck_type === "recall").length || 0;
-  const accuracyToday = questionsDone > 0 ? Math.round((correctToday / questionsDone) * 100) : 0;
-
   // Avg time from quiz sessions only (not review/recall)
   const { data: todaySessionsRaw } = await supabase
     .from("quiz_sessions")
-    .select("total_questions, avg_time_seconds")
+    .select("total_questions, correct, avg_time_seconds, is_pyq")
     .eq("user_id", user.id)
+    .eq("exam", profile.exam)
     .gte("completed_at", today.toISOString());
-  const todaySessions = todaySessionsRaw as Array<{ total_questions: number; avg_time_seconds: number | null }> | null;
+  const todaySessions = todaySessionsRaw as Array<{ total_questions: number; correct: number | null; avg_time_seconds: number | null; is_pyq: boolean | null }> | null;
   const totalQuizTime = todaySessions?.reduce((s, session) => s + ((session.avg_time_seconds || 0) * (session.total_questions || 1)), 0) || 0;
   const totalQuizQuestions = todaySessions?.reduce((sum, s) => sum + (s.total_questions || 0), 0) || 0;
+  const hasTodaySessions = Boolean(todaySessions?.length);
+  const progressQuestionAttempts = todayProgress?.reduce((sum, p) => sum + (p.times_seen || 0), 0) || 0;
+  const progressCorrectAttempts = todayProgress?.reduce((sum, p) => sum + (p.times_correct || 0), 0) || 0;
+  const questionsDone = hasTodaySessions ? totalQuizQuestions : progressQuestionAttempts;
+  const totalDoneToday = questionsDone + flashcardsDone;
+  const correctToday = hasTodaySessions
+    ? todaySessions?.reduce((sum, session) => sum + (session.correct || 0), 0) || 0
+    : progressCorrectAttempts;
+  const accuracyToday = questionsDone > 0 ? Math.round((correctToday / questionsDone) * 100) : 0;
   const avgTime = totalQuizQuestions > 0 ? Math.round(totalQuizTime / totalQuizQuestions) : 0;
+
+  const { data: todayPyqProgressRaw } = await supabase
+    .from("user_progress")
+    .select("question_id, times_seen, questions!inner(is_pyq, exam)")
+    .eq("user_id", user.id)
+    .eq("questions.is_pyq", true)
+    .eq("questions.exam", profile.exam)
+    .gte("last_seen_at", today.toISOString());
+  const pyqProgressToday = (todayPyqProgressRaw || []) as Array<{ times_seen: number | null }>;
+  const pyqSessionToday = todaySessions?.filter((session) => session.is_pyq).reduce((sum, session) => sum + (session.total_questions || 0), 0) || 0;
+  const pyqProgressAttemptsToday = pyqProgressToday.reduce((sum, item) => sum + (item.times_seen || 0), 0);
+  const pyqDoneToday = Math.max(pyqSessionToday, pyqProgressAttemptsToday);
 
   // Recall due count
   const { count: recallDue } = await supabase
     .from("user_progress")
-    .select("*", { count: "exact", head: true })
+    .select("*, questions!inner(exam)", { count: "exact", head: true })
     .eq("user_id", user.id)
+    .eq("questions.exam", profile.exam)
     .lte("next_due_at", new Date().toISOString())
     .in("deck_type", ["recall", "review"]);
 
@@ -68,8 +87,9 @@ export default async function DashboardPage() {
   
   const { data: subjectProgressRaw } = await supabase
     .from("user_progress")
-    .select(`question_id, times_correct, times_seen, questions!inner(subject, topic)`)
-    .eq("user_id", user.id);
+    .select(`question_id, times_correct, times_seen, questions!inner(subject, topic, exam)`)
+    .eq("user_id", user.id)
+    .eq("questions.exam", profile.exam);
   const subjectProgress = subjectProgressRaw as Array<{ 
     question_id: string; 
     times_correct: number; 
@@ -81,7 +101,7 @@ export default async function DashboardPage() {
   const subjectStatsMap = new Map<string, { done: number; correct: number; accuracy: number }>();
   
   (subjectProgress || []).forEach((p) => {
-    const subject = p.questions?.subject;
+    const subject = normalizeSubject(p.questions?.subject);
     if (!subject) return;
     
     const existing = subjectStatsMap.get(subject) || { done: 0, correct: 0, accuracy: 0 };
@@ -160,7 +180,7 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 mb-6">
         <Card className="text-center">
           <p className="font-[family-name:var(--font-dm-mono)] text-2xl font-bold text-[#1E3A8A]">
             {correctToday}
@@ -181,10 +201,16 @@ export default async function DashboardPage() {
           </p>
           <p className="text-xs text-[#64748B] mt-1">Avg time</p>
         </Card>
+        <Card className="text-center">
+          <p className="font-[family-name:var(--font-dm-mono)] text-2xl font-bold text-[#1E3A8A]">
+            {pyqDoneToday}
+          </p>
+          <p className="text-xs text-[#64748B] mt-1">PYQs coming soon</p>
+        </Card>
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 mb-6">
         <Link href="/flashcards">
           <Card hover className="flex items-center gap-3 h-full">
             <div className="w-10 h-10 rounded-xl bg-[#DBEAFE] flex items-center justify-center shrink-0">
@@ -204,6 +230,17 @@ export default async function DashboardPage() {
             <div>
               <p className="font-semibold text-sm text-[#0F172A]">Start Quiz</p>
               <p className="text-xs text-[#64748B]">Practice MCQs</p>
+            </div>
+          </Card>
+        </Link>
+        <Link href="/pyq" className="col-span-2 md:col-span-1">
+          <Card hover className="flex items-center gap-3 h-full">
+            <div className="w-10 h-10 rounded-xl bg-[#DBEAFE] flex items-center justify-center shrink-0">
+              <BookOpenCheck size={18} className="text-[#1E3A8A]" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-[#0F172A]">PYQ Practice Coming Soon</p>
+              <p className="text-xs text-[#64748B]">Year-wise papers coming soon</p>
             </div>
           </Card>
         </Link>
@@ -266,7 +303,7 @@ export default async function DashboardPage() {
               <Crown size={20} className="text-[#FDE68A] shrink-0" />
               <div>
                 <p className="font-semibold text-sm">Upgrade to Pro</p>
-                <p className="text-xs text-white/70">Unlimited questions, all exams, speed mode</p>
+                <p className="text-xs text-white/70">Full access, all NEET practice, speed mode</p>
               </div>
               <span className="ml-auto text-xs bg-white/20 px-2.5 py-1 rounded-full">₹99/mo</span>
             </div>

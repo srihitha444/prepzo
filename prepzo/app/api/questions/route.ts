@@ -5,6 +5,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const exam = searchParams.get("exam");
   const subject = searchParams.get("subject");
+  const topic = searchParams.get("topic");
+  const chapter = searchParams.get("chapter");
+  const pyqOnly = searchParams.get("pyq") === "true";
+  const pyqYear = Number(searchParams.get("year"));
   const difficulty = searchParams.get("difficulty");
   const limit = parseInt(searchParams.get("limit") || "20");
   const offset = parseInt(searchParams.get("offset") || "0");
@@ -27,6 +31,10 @@ export async function GET(request: Request) {
     .range(offset, offset + limit - 1);
 
   if (subject) query = query.eq("subject", subject);
+  if (topic) query = query.eq("topic", topic);
+  if (chapter) query = query.eq("chapter", chapter);
+  if (Number.isFinite(pyqYear) && pyqYear > 0) query = query.eq("pyq_year", pyqYear);
+  if (pyqOnly) query = query.eq("is_pyq", true);
   if (difficulty && difficulty !== "All") query = query.eq("difficulty", difficulty);
 
   const { data, error, count } = await query;

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { TopBar } from "@/components/layout/TopBar";
+import { StudyProfilePrompt } from "@/components/profile/StudyProfilePrompt";
 
 export default async function AppLayout({
   children,
@@ -34,6 +35,7 @@ export default async function AppLayout({
         {children}
       </main>
       <BottomNav />
+      <StudyProfilePrompt userId={user.id} profile={profile} />
     </div>
   );
 }

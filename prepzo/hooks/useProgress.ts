@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getSubjectsForExam } from "@/lib/utils";
+import { getSubjectsForExam, normalizeSubject } from "@/lib/utils";
 
 interface SubjectStat {
   subject: string;
@@ -28,6 +28,10 @@ interface HistoryDay {
   mcqCorrect: number;
   mcqSkipped: number;
   mcqAccuracy: number;
+  pyqAttempts: number;
+  pyqCorrect: number;
+  pyqSkipped: number;
+  pyqAccuracy: number;
   flashcardAttempts: number;
   flashcardCorrect: number;
   flashcardAccuracy: number;
@@ -43,6 +47,9 @@ interface ProgressData {
   totalSkipped: number;
   overallAccuracy: number;
   avgTime: number;
+  pyqDone: number;
+  pyqCorrect: number;
+  pyqAccuracy: number;
   subjectStats: SubjectStat[];
   weakTopics: WeakTopic[];
   currentStreak: number;
@@ -115,14 +122,16 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
 
     const { data: progress } = await supabase
       .from("user_progress")
-      .select(`times_seen, times_correct, avg_time_seconds, deck_type, last_seen_at, questions!inner(subject, topic)`)
+      .select(`times_seen, times_correct, avg_time_seconds, deck_type, last_seen_at, questions!inner(subject, topic, is_pyq, pyq_year)`)
       .eq("user_id", userId)
+      .eq("questions.exam", "NEET")
       .gt("times_seen", 0);
 
     const { data: flashcardProgress } = await supabase
       .from("user_flashcard_progress")
-      .select("times_seen, deck_type, last_seen_at")
+      .select("times_seen, deck_type, last_seen_at, flashcards!inner(exam)")
       .eq("user_id", userId)
+      .eq("flashcards.exam", "NEET")
       .gt("times_seen", 0);
 
     const mcqItems = (progress || []) as Array<{
@@ -131,7 +140,7 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       avg_time_seconds: number | null;
       deck_type: string | null;
       last_seen_at: string | null;
-      questions: { subject: string; topic: string | null };
+      questions: { subject: string; topic: string | null; is_pyq: boolean | null; pyq_year: number | null };
     }>;
     const flashcardItems = (flashcardProgress || []) as Array<{
       times_seen: number;
@@ -139,22 +148,22 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       last_seen_at: string | null;
     }>;
 
-    const mcqDone = mcqItems.reduce((sum, item) => sum + item.times_seen, 0);
-    const mcqCorrect = mcqItems.reduce((sum, item) => sum + item.times_correct, 0);
+    const mcqProgressDone = mcqItems.reduce((sum, item) => sum + item.times_seen, 0);
+    const mcqProgressCorrect = mcqItems.reduce((sum, item) => sum + item.times_correct, 0);
     const flashcardDone = flashcardItems.reduce((sum, item) => sum + item.times_seen, 0);
     const flashcardCorrect = flashcardItems.reduce(
       (sum, item) => sum + (item.deck_type === "recall" ? item.times_seen : 0),
       0
     );
-
-    const totalDone = mcqDone + flashcardDone;
-    const totalCorrect = mcqCorrect + flashcardCorrect;
-    const overallAccuracy = totalDone > 0 ? Math.round((totalCorrect / totalDone) * 100) : 0;
+    const pyqProgressItems = mcqItems.filter((item) => item.questions?.is_pyq);
+    const pyqDone = pyqProgressItems.reduce((sum, item) => sum + item.times_seen, 0);
+    const pyqCorrect = pyqProgressItems.reduce((sum, item) => sum + item.times_correct, 0);
 
     const { data: avgSessions } = await supabase
       .from("quiz_sessions")
-      .select("total_questions, correct, wrong, skipped, avg_time_seconds, completed_at")
-      .eq("user_id", userId);
+      .select("total_questions, correct, wrong, skipped, avg_time_seconds, completed_at, is_pyq, pyq_year")
+      .eq("user_id", userId)
+      .eq("exam", "NEET");
     const sessionsData = (avgSessions || []) as Array<{
       total_questions: number | null;
       correct: number | null;
@@ -162,6 +171,8 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       skipped: number | null;
       avg_time_seconds: number | null;
       completed_at: string | null;
+      is_pyq: boolean | null;
+      pyq_year: number | null;
     }>;
     const totalSessionTime = sessionsData.reduce(
       (sum, session) => sum + ((session.avg_time_seconds || 0) * (session.total_questions || 1)),
@@ -170,11 +181,33 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
     const totalSessionQuestions = sessionsData.reduce((sum, session) => sum + (session.total_questions || 0), 0);
     const avgTime = totalSessionQuestions > 0 ? Math.round(totalSessionTime / totalSessionQuestions) : 0;
     const totalSkipped = sessionsData.reduce((sum, session) => sum + (session.skipped || 0), 0);
-    const totalWrong = Math.max(totalDone - totalCorrect - totalSkipped, 0);
+    const hasSessions = sessionsData.length > 0;
+    const pyqSessionItems = sessionsData.filter((session) => session.is_pyq);
+    const pyqSessionDone = pyqSessionItems.reduce((sum, session) => sum + (session.total_questions || 0), 0);
+    const pyqSessionCorrect = pyqSessionItems.reduce((sum, session) => sum + (session.correct || 0), 0);
+    const nonPyqSessionItems = sessionsData.filter((session) => !session.is_pyq);
+    const nonPyqSessionQuestions = nonPyqSessionItems.reduce((sum, session) => sum + (session.total_questions || 0), 0);
+    const nonPyqSessionCorrect = nonPyqSessionItems.reduce((sum, session) => sum + (session.correct || 0), 0);
+    const mcqDone = hasSessions ? nonPyqSessionQuestions + pyqSessionDone : mcqProgressDone;
+    const mcqCorrect = hasSessions
+      ? nonPyqSessionCorrect + pyqSessionCorrect
+      : mcqProgressCorrect;
+    const pyqDoneFromSessionsOrProgress = pyqSessionDone > 0 ? pyqSessionDone : pyqDone;
+    const pyqCorrectFromSessionsOrProgress = pyqSessionDone > 0 ? pyqSessionCorrect : pyqCorrect;
+    const pyqAccuracyFromSessionsOrProgress = pyqDoneFromSessionsOrProgress > 0
+      ? Math.round((pyqCorrectFromSessionsOrProgress / pyqDoneFromSessionsOrProgress) * 100)
+      : 0;
+    const totalDone = mcqDone + flashcardDone;
+    const totalCorrect = mcqCorrect + flashcardCorrect;
+    const totalWrong = hasSessions
+      ? sessionsData.reduce((sum, session) => sum + (session.wrong || 0), 0)
+      : Math.max(mcqProgressDone - mcqProgressCorrect - totalSkipped, 0);
+    const overallAccuracy = totalDone > 0 ? Math.round((totalCorrect / totalDone) * 100) : 0;
 
     const subjectMap = new Map<string, { done: number; correct: number }>();
     mcqItems.forEach((item) => {
-      const subject = item.questions.subject;
+      const subject = normalizeSubject(item.questions.subject);
+      if (!subject) return;
       const existing = subjectMap.get(subject) || { done: 0, correct: 0 };
       subjectMap.set(subject, {
         done: existing.done + item.times_seen,
@@ -200,7 +233,7 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
     const { threshold: weakTopicThreshold, minAttempts: weakTopicMinAttempts } = getWeakTopicPrefs();
     const topicMap = new Map<string, { subject: string; topic: string; done: number; correct: number }>();
     mcqItems.forEach((item) => {
-      const subject = item.questions.subject;
+      const subject = normalizeSubject(item.questions.subject);
       const topic = item.questions.topic;
       if (!subject || !topic) return;
       const key = `${subject}::${topic}`;
@@ -227,6 +260,9 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       mcqAttempts: number;
       mcqCorrect: number;
       mcqSkipped: number;
+      pyqAttempts: number;
+      pyqCorrect: number;
+      pyqSkipped: number;
       flashcardAttempts: number;
       flashcardCorrect: number;
       recallSeen: number;
@@ -238,6 +274,9 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
         mcqAttempts: 0,
         mcqCorrect: 0,
         mcqSkipped: 0,
+        pyqAttempts: 0,
+        pyqCorrect: 0,
+        pyqSkipped: 0,
         flashcardAttempts: 0,
         flashcardCorrect: 0,
         recallSeen: 0,
@@ -253,6 +292,10 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       const entry = ensureHistory(day);
       entry.mcqAttempts += item.times_seen;
       entry.mcqCorrect += item.times_correct;
+      if (item.questions?.is_pyq) {
+        entry.pyqAttempts += item.times_seen;
+        entry.pyqCorrect += item.times_correct;
+      }
       if (item.deck_type === "recall") entry.recallSeen += item.times_seen;
       if (item.deck_type === "review") entry.reviewSeen += item.times_seen;
     });
@@ -261,7 +304,15 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       const day = toDay(session.completed_at);
       if (!day) return;
       const entry = ensureHistory(day);
-      entry.mcqSkipped += session.skipped || 0;
+      if (session.is_pyq) {
+        entry.pyqAttempts = Math.max(entry.pyqAttempts, session.total_questions || 0);
+        entry.pyqCorrect = Math.max(entry.pyqCorrect, session.correct || 0);
+        entry.pyqSkipped += session.skipped || 0;
+      } else {
+        entry.mcqAttempts = Math.max(entry.mcqAttempts, session.total_questions || 0);
+        entry.mcqCorrect = Math.max(entry.mcqCorrect, session.correct || 0);
+        entry.mcqSkipped += session.skipped || 0;
+      }
     });
 
     flashcardItems.forEach((item) => {
@@ -280,16 +331,20 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, entry], index) => ({
         date,
-        totalAttempts: entry.mcqAttempts + entry.flashcardAttempts,
-        totalCorrect: entry.mcqCorrect + entry.flashcardCorrect,
-        totalSkipped: entry.mcqSkipped,
-        totalAccuracy: entry.mcqAttempts + entry.flashcardAttempts > 0
-          ? Math.round(((entry.mcqCorrect + entry.flashcardCorrect) / (entry.mcqAttempts + entry.flashcardAttempts)) * 100)
+        totalAttempts: entry.mcqAttempts + entry.pyqAttempts + entry.flashcardAttempts,
+        totalCorrect: entry.mcqCorrect + entry.pyqCorrect + entry.flashcardCorrect,
+        totalSkipped: entry.mcqSkipped + entry.pyqSkipped,
+        totalAccuracy: entry.mcqAttempts + entry.pyqAttempts + entry.flashcardAttempts > 0
+          ? Math.round(((entry.mcqCorrect + entry.pyqCorrect + entry.flashcardCorrect) / (entry.mcqAttempts + entry.pyqAttempts + entry.flashcardAttempts)) * 100)
           : 0,
         mcqAttempts: entry.mcqAttempts,
         mcqCorrect: entry.mcqCorrect,
         mcqSkipped: entry.mcqSkipped,
         mcqAccuracy: entry.mcqAttempts > 0 ? Math.round((entry.mcqCorrect / entry.mcqAttempts) * 100) : 0,
+        pyqAttempts: entry.pyqAttempts,
+        pyqCorrect: entry.pyqCorrect,
+        pyqSkipped: entry.pyqSkipped,
+        pyqAccuracy: entry.pyqAttempts > 0 ? Math.round((entry.pyqCorrect / entry.pyqAttempts) * 100) : 0,
         flashcardAttempts: entry.flashcardAttempts,
         flashcardCorrect: entry.flashcardCorrect,
         flashcardAccuracy: entry.flashcardAttempts > 0 ? Math.round((entry.flashcardCorrect / entry.flashcardAttempts) * 100) : 0,
@@ -308,6 +363,9 @@ export function useProgress(userId: string, plan: "free" | "paid" = "free", curr
       totalSkipped,
       overallAccuracy,
       avgTime,
+      pyqDone: pyqDoneFromSessionsOrProgress,
+      pyqCorrect: pyqCorrectFromSessionsOrProgress,
+      pyqAccuracy: pyqAccuracyFromSessionsOrProgress,
       subjectStats,
       weakTopics,
       currentStreak,

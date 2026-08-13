@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, Brain, BarChart2, Layers, Crown, LogOut, Settings, ChevronDown } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { LayoutDashboard, BookOpen, Brain, BarChart2, Layers, Crown, LogOut, Settings, ChevronDown, BookOpenCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, id: "nav-dashboard" },
   { href: "/flashcards", label: "Flashcards", icon: BookOpen, id: "nav-flashcards" },
   { href: "/quiz", label: "Quiz", icon: Brain, id: "nav-quiz" },
+  { href: "/pyq", label: "PYQ Soon", icon: BookOpenCheck, id: "nav-pyq" },
   { href: "/decks", label: "Decks", icon: Layers, id: "nav-decks" },
   { href: "/progress", label: "Progress", icon: BarChart2, id: "nav-progress" },
 ];
@@ -23,6 +24,7 @@ interface SidebarProps {
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [profileOpen, setProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,8 @@ export function Sidebar({ profile }: SidebarProps) {
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const isPyqQuiz = pathname.startsWith("/quiz") && searchParams.get("pyq") === "true";
+          const active = isPyqQuiz ? item.href === "/pyq" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
@@ -77,7 +80,7 @@ export function Sidebar({ profile }: SidebarProps) {
               )}
             >
               <item.icon size={18} />
-              {item.label}
+              <span>{item.label}</span>
             </Link>
           );
         })}

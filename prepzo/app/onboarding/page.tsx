@@ -6,10 +6,11 @@ import { BookOpen, ChevronRight, Clock, Crown, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/Modal";
+import { StudyProfileFields } from "@/components/profile/StudyProfileFields";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 const recallOptions = [
   { value: "daily", label: "Every day" },
@@ -21,6 +22,8 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [selectedExam] = useState<string>("NEET");
+  const [currentStage, setCurrentStage] = useState<string>("");
+  const [targetExams, setTargetExams] = useState<string[]>(["NEET UG"]);
   const [dailyGoal, setDailyGoal] = useState<number>(15);
   const [mcqTimer, setMcqTimer] = useState<number>(30);
   const [mcqRecallFrequency, setMcqRecallFrequency] = useState<string>("daily");
@@ -45,17 +48,39 @@ export default function OnboardingPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      router.push("/auth/login");
+      const isCaVertical = typeof window !== "undefined" && (
+        window.location.hostname === "ca.prepzo.study" ||
+        window.location.hostname === "www.ca.prepzo.study" ||
+        window.location.hostname.endsWith(".ca.prepzo.study") ||
+        window.location.hostname === "ca.localhost" ||
+        window.location.hostname === "www.ca.localhost" ||
+        new URLSearchParams(window.location.search).get("preview")?.toLowerCase() === "ca"
+      );
+      router.push(isCaVertical ? "/ca/auth/login" : "/auth/login");
+      return;
+    }
+
+    if (!currentStage || targetExams.length === 0) {
+      toast.error("Select your class and at least one exam");
+      setLoading(false);
+      setStep(2);
       return;
     }
 
     const combinedDailyGoal = dailyGoal + flashcardGoal;
     const { error } = await supabase
       .from("profiles")
-      .upsert({ id: user.id, exam: selectedExam as "NEET", daily_goal: combinedDailyGoal });
+      .upsert({
+        id: user.id,
+        exam: selectedExam as "NEET",
+        survey_current_stage: currentStage,
+        survey_target_exams: targetExams,
+        survey_completed_at: new Date().toISOString(),
+        daily_goal: combinedDailyGoal,
+      });
 
     if (error) {
-      toast.error("Something went wrong. Please try again.");
+      toast.error("Something went wrong Please try again");
       setLoading(false);
       return;
     }
@@ -73,7 +98,7 @@ export default function OnboardingPage() {
       })
     );
 
-    toast.success("Profile saved! Let's get started.");
+    toast.success("Profile saved! Let's get started");
     router.push("/dashboard");
     router.refresh();
   }
@@ -140,6 +165,39 @@ export default function OnboardingPage() {
             )}
 
             {step === 2 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#0F172A] mb-2">
+                    Quick survey
+                  </h2>
+                  <p className="text-[#64748B] text-sm">
+                    Tell us what you are studying right now and which exams you are preparing for
+                  </p>
+                </div>
+
+                <StudyProfileFields
+                  currentStage={currentStage}
+                  targetExams={targetExams}
+                  onStageChange={setCurrentStage}
+                  onTargetExamsChange={setTargetExams}
+                />
+
+                <button
+                  onClick={() => {
+                    if (!currentStage || targetExams.length === 0) {
+                      toast.error("Select your class and at least one exam");
+                      return;
+                    }
+                    setStep(3);
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white font-semibold transition-all flex items-center justify-center gap-2"
+                >
+                  Continue <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {step === 3 && (
               <div className="space-y-6">
                 <div>
                   <h2 className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#0F172A] mb-2">
@@ -224,7 +282,7 @@ export default function OnboardingPage() {
                 </div>
 
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(4)}
                   className="w-full py-3.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white font-semibold transition-all flex items-center justify-center gap-2"
                 >
                   Continue <ChevronRight size={16} />
@@ -232,7 +290,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <div className="space-y-6">
                 <div>
                   <h2 className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#0F172A] mb-2">

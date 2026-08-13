@@ -23,15 +23,21 @@ export const PLANS = {
     currency: "INR",
     description: "Prepzo Pro — Monthly",
   },
-  yearly: {
-    name: "Yearly",
-    amount: 79900,
-    currency: "INR",
-    description: "Prepzo Pro — Yearly",
-  },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;
+
+export const REFERRAL_DISCOUNT_PERCENT = 10;
+export const REFERRAL_COMMISSION_PERCENT = 20;
+export const REFERRAL_VALID_MONTHS = 12;
+
+export function normalizeReferralCode(code: string): string {
+  return code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+export function getReferralDiscountedAmount(amount: number): number {
+  return Math.round(amount * (100 - REFERRAL_DISCOUNT_PERCENT) / 100);
+}
 
 declare global {
   interface Window {
@@ -41,11 +47,12 @@ declare global {
 
 interface RazorpayOptions {
   key: string;
-  amount: number;
+  amount?: number;
   currency: string;
   name: string;
   description: string;
-  order_id: string;
+  order_id?: string;
+  subscription_id?: string;
   prefill?: { name?: string; email?: string; contact?: string };
   theme?: { color?: string };
   handler?: (response: RazorpayPaymentResponse) => void;
@@ -53,7 +60,8 @@ interface RazorpayOptions {
 }
 
 export interface RazorpayPaymentResponse {
-  razorpay_order_id: string;
+  razorpay_order_id?: string;
+  razorpay_subscription_id?: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
 }
