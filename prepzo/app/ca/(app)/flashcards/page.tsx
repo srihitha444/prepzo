@@ -47,7 +47,8 @@ export default async function CaFlashcardsPage({
       )}
 
       <div className="mt-8">
-        <CaFlashcardsPanel userId={user.id} plan={profile.plan} initialNoteId={noteId} />
+        {/* CA has no pricing/paid tier — always pass "paid" so the shared useFlashcards free-tier session cap never applies here */}
+        <CaFlashcardsPanel userId={user.id} plan="paid" initialNoteId={noteId} />
       </div>
     </div>
   );

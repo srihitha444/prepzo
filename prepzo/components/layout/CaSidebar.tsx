@@ -96,9 +96,6 @@ export function CaSidebar({ profile }: CaSidebarProps) {
               <p className="text-sm font-medium text-[#0F172A] truncate">
                 {profile?.name || "Student"}
               </p>
-              <p className="text-xs text-[#64748B]">
-                {profile?.plan === "paid" ? "Pro Member ✨" : "Free Plan"}
-              </p>
             </div>
             <ChevronDown size={14} className={`text-[#94A3B8] transition-transform ${profileOpen ? "rotate-180" : ""}`} />
           </button>

@@ -1,26 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
-  Check,
   ChevronRight,
   FileText,
-  Loader2,
   Repeat2,
   Sparkles,
   Target,
   Timer,
 } from "lucide-react";
-import toast from "react-hot-toast";
-import { loadRazorpayScript, type PlanKey, type RazorpayPaymentResponse } from "@/lib/razorpay";
-import { createClient } from "@/lib/supabase/client";
 
 export default function CaLandingPage() {
-  const router = useRouter();
-  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("code") || params.has("error")) {
@@ -39,88 +30,6 @@ export default function CaLandingPage() {
     }
   }, []);
 
-  async function handleProCheckout(plan: PlanKey) {
-    setLoadingPlan(plan);
-
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push(`/upgrade?plan=${plan}`);
-        return;
-      }
-
-      const loaded = await loadRazorpayScript();
-      if (!loaded) {
-        toast.error("Failed to load payment gateway. Please try again.");
-        return;
-      }
-
-      const res = await fetch("/api/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const order = await res.json();
-
-      if (!res.ok || !order.order_id) {
-        toast.error(order.error || "Failed to create order");
-        return;
-      }
-
-      const rzp = new window.Razorpay({
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Prepzo CA",
-        description: order.description,
-        order_id: order.order_id,
-        prefill: {
-          email: user.email || "",
-          name: String(user.user_metadata?.full_name || user.user_metadata?.name || ""),
-        },
-        theme: { color: "#1E3A8A" },
-        handler: async (response: RazorpayPaymentResponse) => {
-          const verifyRes = await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            }),
-          });
-          const result = await verifyRes.json();
-
-          if (result.success) {
-            toast.success("Payment successful! Welcome to Pro");
-            window.location.href = "/dashboard";
-          } else {
-            toast.error(result.error || "Payment verification failed. Please contact support.");
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoadingPlan(null);
-            toast.error("Payment cancelled.");
-          },
-        },
-      });
-
-      rzp.on("payment.failed", (response) => {
-        setLoadingPlan(null);
-        toast.error(response.error?.description || "Payment failed. Please try again.");
-      });
-
-      rzp.open();
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setLoadingPlan(null);
-    }
-  }
-
   return (
     <div className="landing-page min-h-screen bg-white text-[#0F172A]">
       {/* NAV */}
@@ -132,9 +41,6 @@ export default function CaLandingPage() {
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Features
-            </a>
-            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-              Pricing
             </a>
             <Link href="/ca/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
               Login
@@ -244,64 +150,6 @@ export default function CaLandingPage() {
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="pricing" className="py-16 md:py-24 bg-[#F8FAFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-[#64748B]">Start completely free. Upgrade only when you&apos;re ready for advanced practice.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto items-stretch">
-
-            {/* Free */}
-            <div className="pricing-card-navy bg-[#1E3A8A] rounded-[14px] border border-[#1E3A8A] shadow-[0_8px_40px_rgba(30,58,138,0.28)] p-7 flex flex-col text-white">
-              <h3 className="text-lg font-bold text-white mb-1">Free</h3>
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-white">₹0</span>
-                <span className="text-white/70 pb-1">/month</span>
-              </div>
-              <ul className="space-y-3 mb-7 flex-1">
-                {FREE_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-white">
-                    <Check size={14} className="text-white/70 shrink-0 mt-0.5" />{f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/ca/auth/signup" className="pricing-card-cta block w-full text-center py-3 rounded-xl bg-white text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all">
-                Get Started Free
-              </Link>
-            </div>
-
-            {/* Pro Monthly */}
-            <div className="pricing-card-navy bg-[#1E3A8A] rounded-[14px] border border-[#1E3A8A] shadow-[0_8px_40px_rgba(30,58,138,0.28)] p-7 flex flex-col text-white">
-              <h3 className="text-lg font-bold text-white mb-1">Pro Monthly</h3>
-              <div className="flex items-end gap-1 mb-6">
-                <span className="text-4xl font-bold font-[family-name:var(--font-fraunces)] text-white">₹99</span>
-                <span className="text-white/70 pb-1">/month</span>
-              </div>
-              <ul className="space-y-3 mb-7 flex-1">
-                {PRO_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-white">
-                    <Check size={14} className="text-[#4ADE80] shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                onClick={() => handleProCheckout("monthly")}
-                disabled={loadingPlan !== null}
-                className="pricing-card-cta flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-white text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF] transition-all disabled:opacity-60"
-              >
-                {loadingPlan === "monthly" && <Loader2 size={16} className="animate-spin" />}
-                {loadingPlan === "monthly" ? "Opening checkout..." : "Get Pro Monthly"}
-              </button>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
       {/* FOOTER */}
       <footer className="landing-footer border-t border-[#E2E8F0] py-14">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 text-center sm:px-6 md:flex-row md:items-start md:justify-between md:text-left">
@@ -323,7 +171,6 @@ export default function CaLandingPage() {
               <div className="flex flex-col gap-2">
                 <Link href="/ca/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
                 <Link href="/ca/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
-                <a href="#pricing" className="hover:text-[#0F172A] transition-colors">Pricing</a>
               </div>
               <div className="flex flex-col gap-2">
                 <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
@@ -360,20 +207,4 @@ const FEATURES = [
   { title: "Spaced Repetition System", description: "Every card you practice — right or wrong — comes back at the perfect time so you never forget before the exam", icon: Repeat2 },
   { title: "Timed Practice", description: "Train under real exam pressure with a live countdown timer", icon: Timer },
   { title: "Weak Topic Detection", description: "Automatically spots your weak topics and shows you exactly what to focus on next", icon: Target },
-];
-
-const FREE_FEATURES = [
-  "15 MCQs per day",
-  "5 flashcards per session",
-  "Progress tracking",
-  "Limited Recall Deck",
-];
-
-const PRO_FEATURES = [
-  "Full access MCQs + Flashcards",
-  "Unlimited notes uploads (coming soon)",
-  "Speed Mode",
-  "Detailed analytics",
-  "Weak topic detection",
-  "Full progress history",
 ];
