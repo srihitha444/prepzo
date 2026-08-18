@@ -8,11 +8,12 @@ import { processTestPaper } from "@/lib/ca/processTestPaper";
 // a hard ~4.5MB request body limit that can't be raised via Next.js
 // config, which silently broke any upload over that size even though this
 // route only ever advertised a 20MB cap. This route now just registers
-// the already-uploaded file's metadata, but maxDuration must stay 60 (not
-// lowered) — after() runs the actual Gemini extraction within this same
-// function's execution budget, comfortably above processingTimeout.ts's
-// own 45s internal cutoff.
-export const maxDuration = 60;
+// the already-uploaded file's metadata, but maxDuration must stay high —
+// after() runs the actual Gemini extraction within this same function's
+// execution budget. 180s comfortably covers processingTimeout.ts's own
+// 165s internal cutoff. Requires Fluid Compute for a Hobby-plan project to
+// actually honor a limit this high (default Hobby without it caps at 60s).
+export const maxDuration = 180;
 
 const MAX_PAGES = 1000;
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {

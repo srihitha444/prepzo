@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-// Matches lib/ca/processingTimeout.ts's own 45s internal cutoff, plus
-// buffer for the download/DB round-trips around it — "usually takes about
-// a minute" is accurate for the common case, and the "stuck" warning below
-// only fires well past where a normal run (or the app's own timeout) would
-// have already finished and recorded a real reason.
+// EXPECTED_SECONDS is the common case (most notes finish well under this);
+// STUCK_THRESHOLD_SECONDS is set past lib/ca/processingTimeout.ts's own
+// 165s internal cutoff plus buffer for the download/DB round-trips around
+// it, so the "stuck" warning only fires once a normal run (or the app's
+// own timeout) would already have finished and recorded a real reason —
+// not while a large document is still legitimately within its allowed
+// processing window.
 const EXPECTED_SECONDS = 60;
-const STUCK_THRESHOLD_SECONDS = 120;
+const STUCK_THRESHOLD_SECONDS = 200;
 
 function elapsedSeconds(createdAt: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
