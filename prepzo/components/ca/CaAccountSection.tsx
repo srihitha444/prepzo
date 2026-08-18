@@ -118,8 +118,10 @@ export function CaAccountSection({ userId, initialName }: { userId: string; init
               const supabase = createClient();
               const { data: { user } } = await supabase.auth.getUser();
               if (user?.email) {
+                // Not routed through /ca/auth/callback's PKCE code exchange
+                // — see the comment on LoginForm.tsx's equivalent call.
                 await supabase.auth.resetPasswordForEmail(user.email, {
-                  redirectTo: `${window.location.origin}/ca/auth/callback?next=${encodeURIComponent("/ca/auth/reset-password")}`,
+                  redirectTo: `${window.location.origin}/ca/auth/reset-password`,
                 });
                 toast.success("Password reset email sent");
               }

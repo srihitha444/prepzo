@@ -1,12 +1,17 @@
-import { randomUUID } from "crypto";
 import { after, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { processNote } from "@/lib/ca/processNote";
 
-export const maxDuration = 60;
+// The file itself is uploaded directly from the browser to Supabase
+// Storage (see lib/ca/clientUpload.ts) — Vercel Serverless Functions have
+// a hard ~4.5MB request body limit that can't be raised via Next.js
+// config, which silently broke any upload over that size even though this
+// route only ever advertised a 20MB cap. This route now just registers
+// the already-uploaded file's metadata and kicks off background
+// processing, so its own request body is always small JSON.
+export const maxDuration = 30;
 
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PAGES = 1000;
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   "application/pdf": "pdf",
@@ -19,18 +24,6 @@ function fileTypeFor(mimeType: string): "pdf" | "image" {
   return mimeType === "application/pdf" ? "pdf" : "image";
 }
 
-async function countPdfPages(buffer: Buffer): Promise<number> {
-  // pdf-lib, not pdf-parse/pdfjs-dist: the latter tries to spin up a
-  // worker thread for parsing, which doesn't bundle correctly under
-  // Next.js/Turbopack for server routes ("Setting up fake worker failed:
-  // Cannot find module '.../pdf.worker.mjs'") — broke on every real PDF,
-  // not just malformed ones. pdf-lib has no worker/canvas dependency and
-  // is enough for a page count.
-  const { PDFDocument } = await import("pdf-lib");
-  const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  return doc.getPageCount();
-}
-
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -39,71 +32,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const title = formData.get("title");
+    const body = await request.json();
+    const filePath = body.file_path;
+    const mimeType = body.mime_type;
+    const pageCount = body.page_count;
+    const title = body.title;
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (typeof filePath !== "string" || !filePath.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: "Invalid file reference" }, { status: 400 });
     }
-
-    const mimeType = file.type;
-    const ext = ALLOWED_MIME_TO_EXT[mimeType];
-    if (!ext) {
+    if (typeof mimeType !== "string" || !ALLOWED_MIME_TO_EXT[mimeType]) {
       return NextResponse.json({ error: "We only support PDF, JPG, PNG, and WEBP files." }, { status: 400 });
     }
-    if (file.size > MAX_FILE_BYTES) {
+    const safePageCount = typeof pageCount === "number" && pageCount > 0 ? Math.floor(pageCount) : 1;
+    if (safePageCount > MAX_PAGES) {
       return NextResponse.json(
-        { error: "Your file is too large. Maximum size is 20MB. Please compress your file and try again." },
+        { error: "Your file has more than 1,000 pages. Please split it into smaller files and upload each separately." },
         { status: 400 }
       );
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    let pageCount = 1;
-    if (mimeType === "application/pdf") {
-      try {
-        pageCount = await countPdfPages(buffer);
-      } catch (pdfError) {
-        console.error("[ca/notes/upload] PDF could not be parsed:", pdfError);
-        return NextResponse.json(
-          { error: "This file could not be opened. Please check the file and try again." },
-          { status: 400 }
-        );
-      }
-      if (pageCount > MAX_PAGES) {
-        return NextResponse.json(
-          {
-            error:
-              "Your file has more than 1,000 pages. Please split it into smaller files and upload each separately.",
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const noteUuid = randomUUID();
-    const filePath = `${user.id}/${noteUuid}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage.from("ca-notes").upload(filePath, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-    if (uploadError) {
-      console.error("CA notes storage upload failed:", uploadError);
-      return NextResponse.json({ error: "Storage upload failed" }, { status: 500 });
     }
 
     const { data: noteRow, error: insertError } = await supabase
       .from("user_notes")
       .insert({
         user_id: user.id,
-        title: typeof title === "string" && title.trim() ? title.trim() : file.name,
+        title: typeof title === "string" && title.trim() ? title.trim() : filePath.split("/").pop(),
         file_path: filePath,
         file_type: fileTypeFor(mimeType),
         mime_type: mimeType,
-        page_count: pageCount,
+        page_count: safePageCount,
       })
       .select("id")
       .single();
@@ -135,7 +92,7 @@ export async function POST(request: Request) {
       note_id: noteRow.id,
       status: "queued",
       file_type: fileTypeFor(mimeType),
-      page_count: pageCount,
+      page_count: safePageCount,
     });
   } catch (error) {
     console.error("CA notes upload error:", error);

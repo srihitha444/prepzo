@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { safeParseJson, uploadFileToStorage } from "@/lib/ca/clientUpload";
 
 export type TestPaperStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -83,15 +84,17 @@ export function useCaTestPapers() {
   }, [papers, fetchPapers]);
 
   async function uploadPaper(file: File, title?: string): Promise<{ test_paper_id: string }> {
-    const formData = new FormData();
-    formData.append("file", file);
-    if (title) formData.append("title", title);
+    const { filePath, mimeType, pageCount } = await uploadFileToStorage({ file, bucket: "ca-test-papers" });
 
-    const res = await fetch("/api/ca/test-papers/upload", { method: "POST", body: formData });
-    const json = await res.json();
+    const res = await fetch("/api/ca/test-papers/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_path: filePath, mime_type: mimeType, page_count: pageCount, title }),
+    });
+    const json = await safeParseJson(res);
     if (!res.ok) throw new Error(json.error || "Upload failed");
     await fetchPapers();
-    return json;
+    return json as { test_paper_id: string };
   }
 
   return { papers, loading, uploadPaper, refetch: fetchPapers };

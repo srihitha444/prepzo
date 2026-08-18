@@ -101,8 +101,16 @@ function LoginFormContent({
     if (!email) return;
     setForgotLoading(true);
     const supabase = createClient();
+    // Not routed through /auth/callback's PKCE code exchange — the
+    // reset-password email is very often opened on a different
+    // browser/device than the one that requested it, which is exactly the
+    // scenario PKCE's code_verifier requirement breaks. The "Reset
+    // Password" email template in the Supabase dashboard must point to
+    // /auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next={{
+    // .RedirectTo }} instead of the default {{ .ConfirmationURL }}, so this
+    // redirectTo value flows through as the final destination.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${appUrl}${callbackPath}?next=${encodeURIComponent(resetPasswordPath)}`,
+      redirectTo: `${appUrl}${resetPasswordPath}`,
     });
     setForgotLoading(false);
     if (error) {

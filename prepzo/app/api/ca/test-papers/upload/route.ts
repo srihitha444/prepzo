@@ -1,12 +1,17 @@
-import { randomUUID } from "crypto";
 import { after, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { processTestPaper } from "@/lib/ca/processTestPaper";
 
-export const maxDuration = 60;
+// The file itself is uploaded directly from the browser to Supabase
+// Storage (see lib/ca/clientUpload.ts) — Vercel Serverless Functions have
+// a hard ~4.5MB request body limit that can't be raised via Next.js
+// config, which silently broke any upload over that size even though this
+// route only ever advertised a 20MB cap. This route now just registers
+// the already-uploaded file's metadata and kicks off background
+// processing, so its own request body is always small JSON.
+export const maxDuration = 30;
 
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_PAGES = 1000;
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   "application/pdf": "pdf",
@@ -14,12 +19,6 @@ const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 };
-
-async function countPdfPages(buffer: Buffer): Promise<number> {
-  const { PDFDocument } = await import("pdf-lib");
-  const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  return doc.getPageCount();
-}
 
 export async function POST(request: Request) {
   try {
@@ -29,70 +28,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const title = formData.get("title");
+    const body = await request.json();
+    const filePath = body.file_path;
+    const mimeType = body.mime_type;
+    const pageCount = body.page_count;
+    const title = body.title;
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (typeof filePath !== "string" || !filePath.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: "Invalid file reference" }, { status: 400 });
     }
-
-    const mimeType = file.type;
-    const ext = ALLOWED_MIME_TO_EXT[mimeType];
-    if (!ext) {
+    if (typeof mimeType !== "string" || !ALLOWED_MIME_TO_EXT[mimeType]) {
       return NextResponse.json({ error: "We only support PDF, JPG, PNG, and WEBP files." }, { status: 400 });
     }
-    if (file.size > MAX_FILE_BYTES) {
+    const safePageCount = typeof pageCount === "number" && pageCount > 0 ? Math.floor(pageCount) : 1;
+    if (safePageCount > MAX_PAGES) {
       return NextResponse.json(
-        { error: "Your file is too large. Maximum size is 20MB. Please compress your file and try again." },
+        { error: "Your file has more than 1,000 pages. Please split it into smaller files and upload each separately." },
         { status: 400 }
       );
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    let pageCount = 1;
-    if (mimeType === "application/pdf") {
-      try {
-        pageCount = await countPdfPages(buffer);
-      } catch (pdfError) {
-        console.error("[ca/test-papers/upload] PDF could not be parsed:", pdfError);
-        return NextResponse.json(
-          { error: "This file could not be opened. Please check the file and try again." },
-          { status: 400 }
-        );
-      }
-      if (pageCount > MAX_PAGES) {
-        return NextResponse.json(
-          {
-            error:
-              "Your file has more than 1,000 pages. Please split it into smaller files and upload each separately.",
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const paperUuid = randomUUID();
-    const filePath = `${user.id}/${paperUuid}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage.from("ca-test-papers").upload(filePath, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-    if (uploadError) {
-      console.error("CA test paper storage upload failed:", uploadError);
-      return NextResponse.json({ error: "Storage upload failed" }, { status: 500 });
     }
 
     const { data: paperRow, error: insertError } = await supabase
       .from("ca_test_papers")
       .insert({
         user_id: user.id,
-        title: typeof title === "string" && title.trim() ? title.trim() : file.name,
+        title: typeof title === "string" && title.trim() ? title.trim() : filePath.split("/").pop(),
         file_path: filePath,
         mime_type: mimeType,
-        page_count: pageCount,
+        page_count: safePageCount,
       })
       .select("id")
       .single();
@@ -121,7 +84,7 @@ export async function POST(request: Request) {
       success: true,
       test_paper_id: paperRow.id,
       status: "queued",
-      page_count: pageCount,
+      page_count: safePageCount,
     });
   } catch (error) {
     console.error("CA test paper upload error:", error);

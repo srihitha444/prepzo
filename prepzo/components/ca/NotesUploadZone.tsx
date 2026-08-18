@@ -3,9 +3,7 @@
 import { useRef, useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-const MAX_BYTES = 20 * 1024 * 1024;
+import { validateUploadFile } from "@/lib/ca/clientUpload";
 
 export function NotesUploadZone({ onUpload }: { onUpload: (file: File) => Promise<void> }) {
   const [dragOver, setDragOver] = useState(false);
@@ -16,12 +14,9 @@ export function NotesUploadZone({ onUpload }: { onUpload: (file: File) => Promis
     const file = fileList?.[0];
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error("We only support PDF, JPG, PNG, and WEBP files.");
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error("Your file is too large. Maximum size is 20MB.");
+    const validationError = validateUploadFile(file);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
