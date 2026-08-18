@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, ChevronDown, ChevronUp } from "lucide-react";
+import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { NotesUploadZone } from "@/components/ca/NotesUploadZone";
+import { ProcessingHint } from "@/components/ca/ProcessingHint";
 import { createClient } from "@/lib/supabase/client";
 import { useCaTestPapers, type CaTestPaper, type TestPaperStatus } from "@/hooks/useCaTestPapers";
 import { getPaperByCode, type CaPaper } from "@/lib/ca-syllabus";
@@ -97,10 +99,12 @@ function PaperRow({
   paper,
   attempts,
   onAttempt,
+  onCancel,
 }: {
   paper: CaTestPaper;
   attempts: AttemptLogRow[];
   onAttempt: () => void;
+  onCancel: () => Promise<void>;
 }) {
   const caPaper = paper.paper ? getPaperByCode(paper.paper) : undefined;
 
@@ -123,6 +127,18 @@ function PaperRow({
         </div>
         <Badge variant={STATUS_VARIANT[paper.status]}>{STATUS_LABEL[paper.status]}</Badge>
       </div>
+
+      {(paper.status === "pending" || paper.status === "processing") && (
+        <ProcessingHint
+          createdAt={paper.created_at}
+          reasons={[
+            "The paper is large or has many questions/pages",
+            "Our AI is under high demand right now",
+            "The file isn't actually a real question paper — Mock Test only accepts real exam/mock papers. If you uploaded study notes by mistake, cancel this and use Upload instead",
+          ]}
+          onCancel={onCancel}
+        />
+      )}
 
       {paper.status === "completed" && (
         <div className="mt-3 border-t border-[#E2E8F0] pt-3">
@@ -147,7 +163,7 @@ export function TestPapersPanel({
   userId: string;
   onAttempt: (testPaperId: string, paper: CaPaper) => void;
 }) {
-  const { papers: uploaded, loading, uploadPaper } = useCaTestPapers();
+  const { papers: uploaded, loading, uploadPaper, cancelPaper } = useCaTestPapers();
   const { history, refetchHistory } = useAttemptHistory(userId, uploaded.map((p) => p.id));
 
   return (
@@ -180,6 +196,13 @@ export function TestPapersPanel({
                 if (!caPaper) return;
                 onAttempt(paper.id, caPaper);
                 refetchHistory();
+              }}
+              onCancel={async () => {
+                try {
+                  await cancelPaper(paper.id);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to cancel");
+                }
               }}
             />
           ))}

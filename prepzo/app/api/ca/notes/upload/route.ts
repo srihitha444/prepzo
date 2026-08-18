@@ -8,9 +8,11 @@ import { processNote } from "@/lib/ca/processNote";
 // a hard ~4.5MB request body limit that can't be raised via Next.js
 // config, which silently broke any upload over that size even though this
 // route only ever advertised a 20MB cap. This route now just registers
-// the already-uploaded file's metadata and kicks off background
-// processing, so its own request body is always small JSON.
-export const maxDuration = 30;
+// the already-uploaded file's metadata, but maxDuration must stay 60 (not
+// lowered) — after() runs the actual Gemini extraction within this same
+// function's execution budget, comfortably above processingTimeout.ts's
+// own 45s internal cutoff.
+export const maxDuration = 60;
 
 const MAX_PAGES = 1000;
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {

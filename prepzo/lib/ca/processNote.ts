@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { extractAndMapContent, type ContentMap } from "@/lib/ca/extraction";
+import { withProcessingTimeout } from "@/lib/ca/processingTimeout";
 import type { CaLevel } from "@/lib/ca-syllabus";
 
 const NOTES_BUCKET = "ca-notes";
@@ -47,15 +48,33 @@ export async function processNote(noteId: string): Promise<void> {
 
     const fileBuffer = Buffer.from(await fileBlob.arrayBuffer());
 
-    const contentMap: ContentMap = await extractAndMapContent({
-      fileBuffer,
-      mimeType: note.mime_type,
-      profile: {
-        ca_level: profile.ca_level as CaLevel,
-        ca_groups: profile.ca_groups,
-        ca_papers: profile.ca_papers,
-      },
-    });
+    // Cheap check right before the expensive/slow step: if the student hit
+    // "Cancel" while this was still queued (the note row gets deleted, not
+    // just flagged — see app/api/ca/notes/[id]/route.ts), skip the Gemini
+    // call entirely rather than doing costly work for a note that's already
+    // gone. A cancel that lands mid-extraction is still handled below, at
+    // the write-back step.
+    const { data: stillExists } = await supabase.from("user_notes").select("id").eq("id", noteId).maybeSingle();
+    if (!stillExists) return;
+
+    const contentMap: ContentMap = await withProcessingTimeout(
+      extractAndMapContent({
+        fileBuffer,
+        mimeType: note.mime_type,
+        profile: {
+          ca_level: profile.ca_level as CaLevel,
+          ca_groups: profile.ca_groups,
+          ca_papers: profile.ca_papers,
+        },
+      })
+    );
+
+    // Re-check after the slow call — a cancel could have landed while
+    // Gemini was still running. Writing to a deleted row would just be a
+    // harmless no-op update, but returning early avoids it outright and
+    // makes the intent explicit.
+    const { data: stillExistsAfter } = await supabase.from("user_notes").select("id").eq("id", noteId).maybeSingle();
+    if (!stillExistsAfter) return;
 
     await supabase.from("user_notes").update({ content_map: contentMap }).eq("id", noteId);
 

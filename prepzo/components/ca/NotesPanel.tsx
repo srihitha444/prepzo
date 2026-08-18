@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { NotesUploadZone } from "@/components/ca/NotesUploadZone";
+import { ProcessingHint } from "@/components/ca/ProcessingHint";
 import { useCaNotes, type NoteStatus } from "@/hooks/useCaNotes";
 import type { ContentBlock } from "@/lib/ca/extraction";
 import type { CaPaper } from "@/lib/ca-syllabus";
@@ -209,7 +210,7 @@ function CheatsheetAction({
 }
 
 export function NotesPanel({ papers }: { papers: CaPaper[] }) {
-  const { notes, loading, uploadNote, confirmBlock, generateContent, generateCheatsheet } = useCaNotes();
+  const { notes, loading, uploadNote, confirmBlock, generateContent, generateCheatsheet, cancelNote } = useCaNotes();
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
 
   return (
@@ -257,6 +258,24 @@ export function NotesPanel({ papers }: { papers: CaPaper[] }) {
                   </div>
                   <Badge variant={STATUS_VARIANT[note.status]}>{STATUS_LABEL[note.status]}</Badge>
                 </div>
+
+                {(note.status === "pending" || note.status === "processing") && (
+                  <ProcessingHint
+                    createdAt={note.created_at}
+                    reasons={[
+                      "The file is large or has a lot of pages",
+                      "The file is image-heavy or a scanned document, which takes longer to read",
+                      "Our AI is under high demand right now",
+                    ]}
+                    onCancel={async () => {
+                      try {
+                        await cancelNote(note.id);
+                      } catch (error) {
+                        toast.error(error instanceof Error ? error.message : "Failed to cancel");
+                      }
+                    }}
+                  />
+                )}
 
                 {note.status === "completed" && (
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E2E8F0] pt-3">

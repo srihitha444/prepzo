@@ -151,5 +151,16 @@ export function useCaNotes() {
     await fetchNotes();
   }
 
-  return { notes, loading, uploadNote, confirmBlock, generateContent, generateCheatsheet, refetch: fetchNotes };
+  async function cancelNote(noteId: string): Promise<void> {
+    const res = await fetch("/api/ca/notes/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note_id: noteId }),
+    });
+    const json = await safeParseJson(res);
+    if (!res.ok) throw new Error(json.error || "Failed to cancel");
+    await fetchNotes();
+  }
+
+  return { notes, loading, uploadNote, confirmBlock, generateContent, generateCheatsheet, cancelNote, refetch: fetchNotes };
 }

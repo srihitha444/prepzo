@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { extractTestPaperQuestions, type VerbatimQuestionRow } from "@/lib/ca/extractTestPaper";
+import { withProcessingTimeout } from "@/lib/ca/processingTimeout";
 
 const TEST_PAPERS_BUCKET = "ca-test-papers";
 
@@ -58,11 +59,26 @@ export async function processTestPaper(testPaperId: string): Promise<void> {
 
     const fileBuffer = Buffer.from(await fileBlob.arrayBuffer());
 
-    const questions = await extractTestPaperQuestions({
-      fileBuffer,
-      mimeType: paperRow.mime_type,
-      testPaperId,
-    });
+    // Cheap check right before the expensive/slow step: if the student hit
+    // "Cancel" while this was still queued (the row gets deleted, not just
+    // flagged — see app/api/ca/test-papers/[id]/route.ts), skip the Gemini
+    // call entirely. A cancel landing mid-extraction is still handled
+    // below, at the write-back step.
+    const { data: stillExists } = await supabase.from("ca_test_papers").select("id").eq("id", testPaperId).maybeSingle();
+    if (!stillExists) return;
+
+    const questions = await withProcessingTimeout(
+      extractTestPaperQuestions({
+        fileBuffer,
+        mimeType: paperRow.mime_type,
+        testPaperId,
+      })
+    );
+
+    // Re-check after the slow call — a cancel could have landed while
+    // Gemini was still running.
+    const { data: stillExistsAfter } = await supabase.from("ca_test_papers").select("id").eq("id", testPaperId).maybeSingle();
+    if (!stillExistsAfter) return;
 
     // Genuinely no extractable content (bad scan, wrong file, etc) — treated
     // the same as a processing failure (status 'failed', error surfaced in

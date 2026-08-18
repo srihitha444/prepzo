@@ -97,5 +97,16 @@ export function useCaTestPapers() {
     return json as { test_paper_id: string };
   }
 
-  return { papers, loading, uploadPaper, refetch: fetchPapers };
+  async function cancelPaper(testPaperId: string): Promise<void> {
+    const res = await fetch("/api/ca/test-papers/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ test_paper_id: testPaperId }),
+    });
+    const json = await safeParseJson(res);
+    if (!res.ok) throw new Error(json.error || "Failed to cancel");
+    await fetchPapers();
+  }
+
+  return { papers, loading, uploadPaper, cancelPaper, refetch: fetchPapers };
 }
