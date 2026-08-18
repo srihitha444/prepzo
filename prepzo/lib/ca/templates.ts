@@ -68,8 +68,8 @@ export function buildQuestionRules(formatClass: FormatClass, contentType: Conten
         diagram: isFinal ? "5 marks and 8 marks" : "4 marks and 5 marks",
       };
       const mcqScenario = isFinal
-        ? "Generate exactly 2 scenario-based MCQs with a more complex, multi-layered business situation than a typical Inter question."
-        : "Generate exactly 2 scenario-based MCQs: a short paragraph describing a real business situation, then a question testing application (not one-line recall). No negative marking.";
+        ? "Generate 1 shared case-study passage — a more complex, multi-layered business situation than a typical Inter question — as a case_studies group, then exactly 2 MCQs under it that both test application of that same passage (not two separate scenarios)."
+        : "Generate 1 shared scenario passage — a short paragraph describing a real business situation — as a case_studies group, then exactly 2 MCQs under it that both test application of that same passage (not one-line recall, and not two separate scenarios). No negative marking.";
       const higherOrderNote = isFinal
         ? " Legal/standard answers must show awareness of recent amendments or judicial interpretations where relevant."
         : "";

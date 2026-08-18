@@ -34,13 +34,16 @@ create policy "ca_test_papers_service_all"
 -- ============================================================
 -- CA TEST PAPERS — one row per uploaded real paper
 -- No content_map/confidence fields (unlike user_notes) — there's no
--- classification step, the paper code is chosen by the student at upload.
+-- confirmation step. paper is nullable: the student no longer picks a
+-- paper at upload (a document can genuinely span more than one), so this
+-- is set after processing to whichever paper most of the extracted
+-- questions actually belong to (see ca-test-papers-auto-detect-paper.sql).
 -- ============================================================
 
 create table if not exists ca_test_papers (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references profiles(id) on delete cascade,
-  paper text not null,
+  paper text,
   title text not null,
   file_path text not null,
   mime_type text not null,
@@ -106,3 +109,25 @@ alter table questions add constraint questions_type_shape_check check (
 
 alter table ca_mock_test_attempts add column if not exists test_paper_id uuid references ca_test_papers(id) on delete set null;
 create index if not exists idx_mock_attempts_test_paper on ca_mock_test_attempts(test_paper_id);
+
+-- ============================================================
+-- EXTEND ca_test_papers — paper is no longer chosen by the student at
+-- upload (see ca-test-papers-auto-detect-paper.sql for the full
+-- rationale) — drop the not-null constraint for anyone who already has
+-- this table from before that change. A no-op if the table is being
+-- created fresh from the statement above, which is already nullable.
+-- ============================================================
+
+alter table ca_test_papers alter column paper drop not null;
+
+-- ============================================================
+-- EXTEND questions — case-study passage grouping (see
+-- ca-case-study-questions.sql for the full rationale). Links several
+-- questions (verbatim-extracted or notes-generated) to one shared
+-- case/scenario passage, stored once instead of duplicated per question or
+-- lost. Both null for a normal standalone question.
+-- ============================================================
+
+alter table questions add column if not exists case_study_passage text;
+alter table questions add column if not exists case_study_group_id uuid;
+create index if not exists idx_questions_case_study_group on questions(case_study_group_id);

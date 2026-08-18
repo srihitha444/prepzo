@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import { after, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
-import { getPaperByCode } from "@/lib/ca-syllabus";
 import { processTestPaper } from "@/lib/ca/processTestPaper";
 
 export const maxDuration = 60;
@@ -33,13 +32,9 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
     const title = formData.get("title");
-    const paperCode = formData.get("paper");
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-    if (typeof paperCode !== "string" || !getPaperByCode(paperCode)) {
-      return NextResponse.json({ error: "A valid paper is required" }, { status: 400 });
     }
 
     const mimeType = file.type;
@@ -94,7 +89,6 @@ export async function POST(request: Request) {
       .from("ca_test_papers")
       .insert({
         user_id: user.id,
-        paper: paperCode,
         title: typeof title === "string" && title.trim() ? title.trim() : file.name,
         file_path: filePath,
         mime_type: mimeType,

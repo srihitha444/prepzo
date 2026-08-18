@@ -71,6 +71,12 @@ export interface Question {
   section_references: string[] | null;
   note_id: string | null;
   block_id: string | null;
+  // A shared case-study/scenario passage (verbatim test-paper extraction
+  // only — see supabase/ca-case-study-questions.sql) linking this question
+  // to the other sub-questions in the same group. Null for a standalone
+  // question.
+  case_study_passage: string | null;
+  case_study_group_id: string | null;
 }
 
 export interface Flashcard {

@@ -193,6 +193,13 @@ export function PracticeExplorer({ papers, userId, noteId }: { papers: CaPaper[]
             )}
           </div>
 
+          {practice.question.case_study_passage && (
+            <div className="mb-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#1E3A8A]">Case Study</p>
+              <QuestionText text={practice.question.case_study_passage} className="text-sm leading-relaxed text-[#0F172A]" />
+            </div>
+          )}
+
           <QuestionText text={practice.question.question_text} className="text-sm font-medium leading-relaxed text-[#0F172A]" />
 
           {mode === "mcq" ? (

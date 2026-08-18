@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { getContentModel, generateWithRetry } from "@/lib/gemini";
 import { getPaperByCode, type CaLevel } from "@/lib/ca-syllabus";
 import { buildFlashcardRules, buildQuestionRules, getFormatClass } from "@/lib/ca/templates";
@@ -27,6 +28,14 @@ export interface GeneratedQuestionRow {
   section_references: string[] | null;
   note_id: string;
   block_id: string;
+  // A shared case-study/scenario passage (intermediate-mixed/final-mixed
+  // MCQs — see buildQuestionRules in templates.ts) linking this question to
+  // the other MCQs generated under the same passage. Captured once per
+  // group in code (see generateForBlocks below) and copied identically to
+  // every question in the group, never re-derived per question, so it can't
+  // drift between them. Null for a standalone question.
+  case_study_passage: string | null;
+  case_study_group_id: string | null;
 }
 
 export interface GeneratedFlashcardRow {
@@ -65,10 +74,16 @@ interface RawFlashcard {
   section_reference?: string;
 }
 
+interface RawCaseStudyGroup {
+  passage?: string;
+  questions?: RawQuestion[];
+}
+
 interface RawBlockResult {
   block_id?: string;
   questions?: RawQuestion[];
   flashcards?: RawFlashcard[];
+  case_studies?: RawCaseStudyGroup[];
 }
 
 const VALID_FLASHCARD_TYPES = new Set([
@@ -96,13 +111,7 @@ export function normalizeDifficulty(value: string | undefined): "Easy" | "Medium
   return null;
 }
 
-const RESULT_SHAPE_BY_MODE: Record<GenerateMode, string> = {
-  questions: `{
-  "results": [
-    {
-      "block_id": "the BLOCK id from above",
-      "questions": [
-        {
+const GENERATED_QUESTION_SHAPE = `{
           "question_type": "mcq" | "descriptive",
           "question_text": "string",
           "option_a": "string or omit for descriptive",
@@ -117,6 +126,22 @@ const RESULT_SHAPE_BY_MODE: Record<GenerateMode, string> = {
           "difficulty": "Easy|Medium|Hard, mcq only",
           "explanation": "string",
           "section_references": ["string"]
+        }`;
+
+const RESULT_SHAPE_BY_MODE: Record<GenerateMode, string> = {
+  questions: `{
+  "results": [
+    {
+      "block_id": "the BLOCK id from above",
+      "questions": [
+        ${GENERATED_QUESTION_SHAPE}
+      ],
+      "case_studies": [
+        {
+          "passage": "string, the shared scenario/case passage — see this block's instructions for when to use this",
+          "questions": [
+            ${GENERATED_QUESTION_SHAPE}
+          ]
         }
       ]
     }
@@ -184,6 +209,7 @@ ${mode === "questions" ? `- mcq questions: correct_option is exactly one of "A",
 - Never invent section numbers or standard numbers not present in the source content
 - Any tabular content (balance sheets, ledgers, trial balances, journal entries) must be a proper markdown table — a header row, a \`|---|---|\` separator row, then one data row per line. Never flatten a table's rows/columns into a single run-on line of text separated by "|".
 - If a question has multiple lettered/numbered sub-parts — (i)/(ii)/(iii), (a)/(b)/(c), or similar — put each sub-part on its own line (separate it from the next with a blank line), keeping its label. Never run sub-parts together into one continuous paragraph.
+${mode === "questions" ? `- When a block's instructions say to generate a shared case/scenario passage: put the passage once under that block's "case_studies[].passage", and list ONLY the MCQs testing it under "case_studies[].questions" — never duplicate the passage into each question's own question_text, and never also repeat those questions under the block's top-level "questions" array. A question with no shared passage belongs in "questions", not in a case_studies group of its own.` : ""}
 
 Return strict JSON only, matching this shape:
 ${RESULT_SHAPE_BY_MODE[mode]}`;
@@ -210,8 +236,12 @@ ${RESULT_SHAPE_BY_MODE[mode]}`;
     if (!paper) continue;
 
     if (mode === "questions") {
-      for (const q of blockResult.questions || []) {
-        if (!isValidQuestion(q)) continue;
+      // Shared by both standalone questions and every case-study group's
+      // questions — passage/groupId are null for a standalone question, and
+      // the SAME passage string/groupId are passed for every question in a
+      // group (computed once by the caller below), never re-derived per question.
+      const pushQuestion = (q: RawQuestion, passage: string | null, groupId: string | null) => {
+        if (!isValidQuestion(q)) return;
         const isMcq = q.question_type === "mcq";
         questions.push({
           question_type: isMcq ? "mcq" : "descriptive",
@@ -235,7 +265,20 @@ ${RESULT_SHAPE_BY_MODE[mode]}`;
           section_references: q.section_references && q.section_references.length > 0 ? q.section_references : null,
           note_id: noteId,
           block_id: block.block_id,
+          case_study_passage: passage,
+          case_study_group_id: groupId,
         });
+      };
+
+      for (const q of blockResult.questions || []) {
+        pushQuestion(q, null, null);
+      }
+      for (const group of blockResult.case_studies || []) {
+        if (!group.passage || !group.questions?.length) continue;
+        const groupId = randomUUID();
+        for (const q of group.questions) {
+          pushQuestion(q, group.passage, groupId);
+        }
       }
     } else {
       for (const f of blockResult.flashcards || []) {

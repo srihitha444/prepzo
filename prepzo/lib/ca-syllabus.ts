@@ -67,7 +67,7 @@ export const CA_SYLLABUS: Record<CaLevel, CaLevelSyllabus> = {
         papers: [
           { code: "N1", name: "Financial Reporting", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
           { code: "N2", name: "Advanced Financial Management", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
-          { code: "N3", name: "Advanced Auditing", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
+          { code: "N3", name: "Advanced Auditing, Assurance and Professional Ethics", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
         ],
       },
       {
@@ -75,7 +75,7 @@ export const CA_SYLLABUS: Record<CaLevel, CaLevelSyllabus> = {
         papers: [
           { code: "N4", name: "Direct Tax Laws & International Taxation", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
           { code: "N5", name: "Indirect Tax Laws", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100 },
-          { code: "N6", name: "Integrated Business Solutions", format: "mixed", objectivePercent: 30, negativeMarking: false, marks: 100, isCaseStudy: true },
+          { code: "N6", name: "Integrated Business Solutions", format: "mixed", objectivePercent: 40, negativeMarking: false, marks: 100, isCaseStudy: true },
         ],
       },
     ],

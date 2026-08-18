@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
         const profileData = profile as { exam: string | null } | null;
         if (!profileData?.exam) {
-          return NextResponse.redirect(`${origin}/onboarding`);
+          return NextResponse.redirect(`${origin}${isCaHost ? "/ca/onboarding" : "/onboarding"}`);
         }
       }
       return NextResponse.redirect(`${origin}${next}`);

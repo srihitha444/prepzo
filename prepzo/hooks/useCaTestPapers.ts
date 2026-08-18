@@ -7,7 +7,10 @@ export type TestPaperStatus = "pending" | "processing" | "completed" | "failed";
 
 export interface CaTestPaper {
   id: string;
-  paper: string;
+  // Detected from the uploaded document's content after processing, not
+  // chosen by the student — null until processing finishes (or if
+  // processing failed before a paper could be identified).
+  paper: string | null;
   title: string;
   page_count: number;
   processed: boolean;
@@ -79,10 +82,9 @@ export function useCaTestPapers() {
     return () => clearInterval(interval);
   }, [papers, fetchPapers]);
 
-  async function uploadPaper(file: File, paperCode: string, title?: string): Promise<{ test_paper_id: string }> {
+  async function uploadPaper(file: File, title?: string): Promise<{ test_paper_id: string }> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("paper", paperCode);
     if (title) formData.append("title", title);
 
     const res = await fetch("/api/ca/test-papers/upload", { method: "POST", body: formData });

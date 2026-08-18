@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { FileText, ChevronDown, ChevronUp } from "lucide-react";
-import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { NotesUploadZone } from "@/components/ca/NotesUploadZone";
@@ -102,7 +102,7 @@ function PaperRow({
   attempts: AttemptLogRow[];
   onAttempt: () => void;
 }) {
-  const caPaper = getPaperByCode(paper.paper);
+  const caPaper = paper.paper ? getPaperByCode(paper.paper) : undefined;
 
   return (
     <Card className="p-4">
@@ -113,8 +113,7 @@ function PaperRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-[#0F172A]">{paper.title}</p>
           <p className="truncate text-xs text-[#64748B]">
-            {caPaper?.name || paper.paper}
-            {" · "}
+            {caPaper && `${caPaper.name} · `}
             {paper.status === "completed"
               ? `${paper.question_count} question${paper.question_count === 1 ? "" : "s"}`
               : paper.status === "failed"
@@ -143,46 +142,28 @@ function PaperRow({
 
 export function TestPapersPanel({
   userId,
-  papers,
   onAttempt,
 }: {
   userId: string;
-  papers: CaPaper[];
   onAttempt: (testPaperId: string, paper: CaPaper) => void;
 }) {
   const { papers: uploaded, loading, uploadPaper } = useCaTestPapers();
-  const [selectedPaper, setSelectedPaper] = useState(papers[0]?.code || "");
   const { history, refetchHistory } = useAttemptHistory(userId, uploaded.map((p) => p.id));
 
   return (
     <div>
       <p className="text-sm text-[#64748B]">
-        Upload a real past or mock paper — questions are transcribed exactly as printed, not AI-generated, so you can attempt the actual paper.
+        Mock Test is for real past or mock exam papers only — upload the actual question paper (PDF or scan) and we transcribe it exactly as printed, not AI-generated, so you can attempt the real thing. We detect which paper it&apos;s from automatically. Want practice questions or flashcards generated from your own study notes instead?{" "}
+        <Link href="/notes" className="font-semibold text-[#1E3A8A] hover:underline">
+          Check out Upload
+        </Link>
+        .
       </p>
-
-      <div className="mt-4 flex items-center gap-2">
-        <label className="text-xs font-semibold text-[#64748B]">Paper</label>
-        <select
-          value={selectedPaper}
-          onChange={(e) => setSelectedPaper(e.target.value)}
-          className="rounded-lg border border-[#E2E8F0] bg-white px-2 py-1.5 text-xs text-[#0F172A]"
-        >
-          {papers.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <div className="mt-3">
         <NotesUploadZone
           onUpload={async (file) => {
-            if (!selectedPaper) {
-              toast.error("Select a paper first");
-              return;
-            }
-            await uploadPaper(file, selectedPaper);
+            await uploadPaper(file);
           }}
         />
       </div>
@@ -195,7 +176,7 @@ export function TestPapersPanel({
               paper={paper}
               attempts={history.get(paper.id) || []}
               onAttempt={() => {
-                const caPaper = getPaperByCode(paper.paper);
+                const caPaper = paper.paper ? getPaperByCode(paper.paper) : undefined;
                 if (!caPaper) return;
                 onAttempt(paper.id, caPaper);
                 refetchHistory();

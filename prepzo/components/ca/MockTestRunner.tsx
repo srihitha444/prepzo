@@ -113,6 +113,13 @@ function TestRunner({
               </p>
             )}
 
+            {q.case_study_passage && (
+              <div className="mb-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#1E3A8A]">Case Study</p>
+                <QuestionText text={q.case_study_passage} className="text-sm leading-relaxed text-[#0F172A]" />
+              </div>
+            )}
+
             <QuestionText text={q.question_text} className="text-sm font-medium leading-relaxed text-[#0F172A]" />
           </div>
         }
@@ -229,7 +236,6 @@ export function MockTestRunner({ papers, userId }: { papers: CaPaper[]; userId: 
         <h2 className="mb-1 text-sm font-semibold text-[#0F172A]">Your Real Papers</h2>
         <TestPapersPanel
           userId={userId}
-          papers={papers}
           onAttempt={(testPaperId, paper) => setActive({ paper, testPaperId })}
         />
       </div>
