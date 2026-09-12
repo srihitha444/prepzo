@@ -40,6 +40,10 @@ export async function POST(request: Request) {
     const mimeType = body.mime_type;
     const pageCount = body.page_count;
     const title = body.title;
+    // sha256 of the uploaded bytes, computed in the browser — the shared
+    // derivation cache key. Optional: crypto.subtle isn't available on an
+    // insecure origin, and a note with no hash simply never hits the cache.
+    const fileHash = typeof body.file_hash === "string" && /^[0-9a-f]{64}$/.test(body.file_hash) ? body.file_hash : null;
 
     if (typeof filePath !== "string" || !filePath.startsWith(`${user.id}/`)) {
       return NextResponse.json({ error: "Invalid file reference" }, { status: 400 });
@@ -64,6 +68,7 @@ export async function POST(request: Request) {
         file_type: fileTypeFor(mimeType),
         mime_type: mimeType,
         page_count: safePageCount,
+        file_hash: fileHash,
       })
       .select("id")
       .single();

@@ -14,11 +14,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: { note_id?: string } = await request.json();
+    const body: { note_id?: string; block_ids?: string[] } = await request.json();
     const { note_id } = body;
     if (!note_id) {
       return NextResponse.json({ error: "note_id is required" }, { status: 400 });
     }
+    // Which topics feed the cheatsheet. Still one cheatsheet per note —
+    // this narrows the source content, it doesn't create a second row — so
+    // regenerating from a different topic selection replaces the document,
+    // exactly as regenerating from the whole note always did.
+    const blockIds = Array.isArray(body.block_ids) && body.block_ids.length > 0 ? body.block_ids : undefined;
 
     const service = await createServiceClient();
 
@@ -42,6 +47,7 @@ export async function POST(request: Request) {
       userId: user.id,
       noteId: note_id,
       noteTitle: note.title,
+      blockIds,
     });
 
     // Upsert on (user_id, note_id) — this same call also powers "Regenerate",

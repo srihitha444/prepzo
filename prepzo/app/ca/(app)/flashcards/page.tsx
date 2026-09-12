@@ -33,22 +33,14 @@ export default async function CaFlashcardsPage({
         Sections, codes, and formulas from your notes — turned into recall-ready flashcards.
       </p>
 
-      {papers.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
-          {papers.map((paper) => (
-            <span
-              key={paper!.code}
-              className="rounded-full border border-[#E2E8F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#1E3A8A]"
-            >
-              {paper!.name}
-            </span>
-          ))}
-        </div>
-      )}
-
       <div className="mt-8">
         {/* CA has no pricing/paid tier — always pass "paid" so the shared useFlashcards free-tier session cap never applies here */}
-        <CaFlashcardsPanel userId={user.id} plan="paid" initialNoteId={noteId} />
+        <CaFlashcardsPanel
+          userId={user.id}
+          plan="paid"
+          initialNoteId={noteId}
+          papers={papers.map((p) => ({ code: p!.code, name: p!.name }))}
+        />
       </div>
     </div>
   );

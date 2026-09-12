@@ -48,7 +48,9 @@ interface SessionLogRow {
   completed_at: string;
 }
 
-type ActiveView = { kind: "study" | "review"; noteId: string; topic: string } | null;
+// topic: null means "study across every section in this deck at once"
+// (Study view only — Review & Recall stays section-scoped).
+type ActiveView = { kind: "study" | "review"; noteId: string; topic: string | null } | null;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -238,13 +240,14 @@ function DeckRow({
   deck: Deck;
   historyFor: (topic: string) => SessionLogRow[];
   defaultExpanded: boolean;
-  onStudySection: (topic: string) => void;
+  onStudySection: (topic: string | null) => void;
   onReviewSection: (topic: string) => void;
 }) {
   const singleSection = deck.sections.length <= 1;
   const [expanded, setExpanded] = useState(defaultExpanded || singleSection);
   const paper = deck.paper ? getPaperByCode(deck.paper) : null;
   const onlySection = deck.sections[0];
+  const totalAttempts = deck.sections.reduce((sum, s) => sum + historyFor(s.topic).length, 0);
 
   return (
     <Card className="p-4">
@@ -257,6 +260,7 @@ function DeckRow({
           <p className="text-xs text-[#64748B]">
             {paper?.name || "Unassigned"} · {deck.cardCount} cards
             {!singleSection && ` · ${deck.sections.length} sections`}
+            {totalAttempts > 0 && ` · attempted ${totalAttempts}×`}
           </p>
         </div>
         {singleSection && onlySection ? (
@@ -266,12 +270,20 @@ function DeckRow({
             onReview={() => onReviewSection(onlySection.topic)}
           />
         ) : (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="shrink-0 flex items-center gap-1 rounded-lg border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#1E3A8A] hover:border-[#3B5FBF]"
-          >
-            Sections {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => onStudySection(null)}
+              className="rounded-lg bg-[#1E3A8A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#162D6B]"
+            >
+              Study all
+            </button>
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1 rounded-lg border border-[#E2E8F0] px-3 py-1.5 text-xs font-semibold text-[#1E3A8A] hover:border-[#3B5FBF]"
+            >
+              Sections {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
         )}
       </div>
 
@@ -302,14 +314,17 @@ function StudySession({
   deck,
   topic,
   onExit,
+  onSwitchSection,
 }: {
   userId: string;
   plan: "free" | "paid";
   deck: Deck;
-  topic: string;
+  topic: string | null;
   onExit: () => void;
+  onSwitchSection: (topic: string | null) => void;
 }) {
-  const section = deck.sections.find((s) => s.topic === topic);
+  const allSections = topic === null;
+  const section = topic ? deck.sections.find((s) => s.topic === topic) : null;
   const sectionCardCount = section?.cardCount ?? deck.cardCount;
   const paper = deck.paper ? getPaperByCode(deck.paper) : null;
   const sessionGoal = Math.min(sectionCardCount, MAX_DECK_SESSION_SIZE);
@@ -319,16 +334,22 @@ function StudySession({
     userId,
     plan,
     noteId: deck.noteId,
-    topic: topic === "General" ? undefined : topic,
+    topic: !topic || topic === "General" ? undefined : topic,
     sessionGoal,
   });
+
+  // Sections are shown alphabetically everywhere else (useDecks sorts them
+  // the same way) — jumping straight to "the next one" only makes sense
+  // relative to that same order.
+  const sectionIndex = topic ? deck.sections.findIndex((s) => s.topic === topic) : -1;
+  const nextSection = sectionIndex >= 0 && sectionIndex + 1 < deck.sections.length ? deck.sections[sectionIndex + 1] : null;
 
   return (
     <div>
       <button onClick={onExit} className="mb-4 flex items-center gap-1 text-xs font-semibold text-[#64748B] hover:text-[#0F172A]">
         <ChevronLeft size={14} /> Back to decks
       </button>
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{deck.title} · {topic}</p>
+      <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{deck.title} · {allSections ? "All sections" : topic}</p>
 
       {session.loading ? (
         <p className="text-sm text-[#64748B]">Loading cards...</p>
@@ -339,8 +360,16 @@ function StudySession({
             {session.recallCount} recalled · {session.reviewCount} need review
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
+            {nextSection && (
+              <button
+                onClick={() => onSwitchSection(nextSection.topic)}
+                className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF]"
+              >
+                Next section: {nextSection.topic} →
+              </button>
+            )}
             {sectionCardCount > session.displayTotal && (
-              <button onClick={session.continueSession} className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF]">
+              <button onClick={session.continueSession} className="rounded-xl border border-white/25 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10">
                 Study next cards in this section
               </button>
             )}
@@ -546,10 +575,21 @@ const SORTERS: Record<DeckSort, (a: Deck, b: Deck) => number> = {
   cards: (a, b) => b.cardCount - a.cardCount,
 };
 
-export function CaFlashcardsPanel({ userId, plan, initialNoteId }: { userId: string; plan: "free" | "paid"; initialNoteId?: string }) {
+export function CaFlashcardsPanel({
+  userId,
+  plan,
+  initialNoteId,
+  papers = [],
+}: {
+  userId: string;
+  plan: "free" | "paid";
+  initialNoteId?: string;
+  papers?: { code: string; name: string }[];
+}) {
   const { decks, history, loading, refetch } = useDecks(userId);
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [sort, setSort] = useState<DeckSort>("recent");
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
 
   // A direct link from a note (e.g. "Ask AI Teacher"'s sibling "Study
   // flashcards" button) only knows the note, not a section — auto-start
@@ -565,16 +605,21 @@ export function CaFlashcardsPanel({ userId, plan, initialNoteId }: { userId: str
   }, [initialNoteId, loading, decks]);
 
   const activeDeck = decks.find((d) => d.noteId === activeView?.noteId) || null;
-  const sortedDecks = [...decks].sort(SORTERS[sort]);
+  const sortedDecks = [...decks].filter((d) => !subjectFilter || d.paper === subjectFilter).sort(SORTERS[sort]);
 
   function exitSession() {
     setActiveView(null);
     refetch();
   }
 
+  function switchSection(topic: string | null) {
+    setActiveView((view) => (view ? { ...view, topic } : view));
+    void refetch();
+  }
+
   if (activeDeck && activeView) {
     return activeView.kind === "study" ? (
-      <StudySession userId={userId} plan={plan} deck={activeDeck} topic={activeView.topic} onExit={exitSession} />
+      <StudySession userId={userId} plan={plan} deck={activeDeck} topic={activeView.topic} onExit={exitSession} onSwitchSection={switchSection} />
     ) : (
       <SectionReviewSession userId={userId} deck={activeDeck} topic={activeView.topic} onExit={exitSession} />
     );
@@ -582,6 +627,27 @@ export function CaFlashcardsPanel({ userId, plan, initialNoteId }: { userId: str
 
   return (
     <div>
+      {papers.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {papers.map((paper) => {
+            const active = subjectFilter === paper.code;
+            return (
+              <button
+                key={paper.code}
+                onClick={() => setSubjectFilter(active ? null : paper.code)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                  active
+                    ? "border-[#1E3A8A] bg-[#1E3A8A] text-white"
+                    : "border-[#E2E8F0] bg-white text-[#1E3A8A] hover:border-[#3B5FBF]"
+                }`}
+              >
+                {paper.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#0F172A]">Your decks</h2>
         {decks.length > 1 && (
@@ -601,6 +667,10 @@ export function CaFlashcardsPanel({ userId, plan, initialNoteId }: { userId: str
       ) : decks.length === 0 ? (
         <p className="text-sm text-[#64748B]">
           No flashcards yet — upload notes to generate some, then they&apos;ll show up here as a deck.
+        </p>
+      ) : sortedDecks.length === 0 ? (
+        <p className="text-sm text-[#64748B]">
+          No flashcards for this subject yet — tap it again to see every deck.
         </p>
       ) : (
         <div className="space-y-2">

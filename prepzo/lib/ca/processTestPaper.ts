@@ -1,10 +1,22 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { extractTestPaperQuestions, type VerbatimQuestionRow } from "@/lib/ca/extractTestPaper";
 import { withProcessingTimeout } from "@/lib/ca/processingTimeout";
+import { isRetryableGeminiError } from "@/lib/gemini";
 
 const TEST_PAPERS_BUCKET = "ca-test-papers";
 
+// extractTestPaperQuestions already retries transient 503/429s patiently
+// (see PATIENT_RETRY_DELAYS_MS in lib/gemini.ts) before ever throwing —
+// reaching here with one still means Gemini stayed overloaded through
+// every retry, not a one-off hiccup. The raw SDK error ("[GoogleGenerativeAI
+// Error]: Error fetching from https://...generateContent: [503 ...") is
+// accurate but meaningless to a student; every other Gemini call site in
+// this app already translates this into the same plain-language message —
+// this was the one place that hadn't been.
 function errorMessage(error: unknown): string {
+  if (isRetryableGeminiError(error)) {
+    return "Our AI is experiencing high demand right now. Cancel this and try uploading again in a few minutes.";
+  }
   if (error instanceof Error) return error.message;
   return "Unknown processing error";
 }

@@ -32,15 +32,67 @@ export async function POST(request: Request) {
       }
     }
 
+    // Which documents this user held. Read BEFORE deleting the auth user,
+    // because user_notes cascades away with them.
+    const { data: ownNotes } = await serviceClient
+      .from("user_notes")
+      .select("file_hash")
+      .eq("user_id", user.id)
+      .not("file_hash", "is", null);
+    const ownHashes = Array.from(new Set<string>((ownNotes || []).map((n: { file_hash: string }) => n.file_hash)));
+
     const { error: deleteError } = await serviceClient.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Account deletion failed:", deleteError);
       return NextResponse.json({ error: "Failed to delete account" }, { status: 500 });
     }
 
+    await pruneOrphanedCache(serviceClient, ownHashes);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Account deletion error:", error);
     return NextResponse.json({ error: "Failed to delete account" }, { status: 500 });
+  }
+}
+
+/**
+ * Retention rule for the shared derivation cache (DPDP Act 2023).
+ *
+ * A cached derivation is kept only while at least one live user still holds
+ * the document it came from. Run right after the departing user's rows have
+ * cascaded away, so the "does anyone else still have this?" check reflects
+ * reality:
+ *
+ *   - another user still has the same file_hash -> the derivation stays,
+ *     effectively transferring to them. Students who legitimately hold the
+ *     same document keep the benefit, and so does anyone who uploads it later.
+ *   - nobody else has it -> the derivation is deleted with its only holder.
+ *     This is what keeps a private document (handwritten notes, which no one
+ *     else will ever upload byte-identically) from lingering in a shared
+ *     store after its owner has gone.
+ *
+ * Best-effort: the account is already deleted by this point and must not be
+ * reported as failed because a cache row survived. Anything left behind is
+ * unreachable — no user_notes row references the hash — and gets cleaned up
+ * on the next deletion that touches it.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function pruneOrphanedCache(serviceClient: any, hashes: string[]): Promise<void> {
+  if (hashes.length === 0) return;
+
+  try {
+    const { data: survivingNotes } = await serviceClient
+      .from("user_notes")
+      .select("file_hash")
+      .in("file_hash", hashes);
+    const stillHeld = new Set((survivingNotes || []).map((n: { file_hash: string }) => n.file_hash));
+    const orphaned = hashes.filter((h) => !stillHeld.has(h));
+    if (orphaned.length === 0) return;
+
+    await serviceClient.from("ca_generation_cache").delete().in("file_hash", orphaned);
+    await serviceClient.from("ca_extraction_cache").delete().in("file_hash", orphaned);
+  } catch (error) {
+    console.error("Account deletion: failed to prune orphaned derivation cache:", error);
   }
 }

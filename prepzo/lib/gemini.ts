@@ -50,6 +50,15 @@ export function getChatModel(): GenerativeModel {
 const RETRYABLE_STATUS_CODES = new Set([503, 429]);
 const RETRY_DELAYS_MS = [800, 2000];
 
+// For background extraction/processing calls (lib/ca/extraction.ts,
+// lib/ca/extractTestPaper.ts) — those now run inside a 165s processing
+// budget (see lib/ca/processingTimeout.ts), not a synchronous request a
+// student is staring at, so it's worth trading a slower failure for a much
+// better chance of actually succeeding through a burst of 503 "high
+// demand" errors, rather than giving up after ~3s like every interactive
+// call site (chat, cheatsheet/question generation, evaluation) still does.
+export const PATIENT_RETRY_DELAYS_MS = [2000, 5000, 10000, 20000];
+
 export function isRetryableGeminiError(error: unknown): boolean {
   const status = (error as { status?: number })?.status;
   return typeof status === "number" && RETRYABLE_STATUS_CODES.has(status);
@@ -65,20 +74,22 @@ function sleep(ms: number): Promise<void> {
  * model aliases like gemini-flash-latest, and they usually clear within a
  * couple of seconds, so this beats surfacing the raw error to the student
  * on the first hiccup. Non-retryable errors (bad request, missing key,
- * etc.) still throw immediately.
+ * etc.) still throw immediately. Pass PATIENT_RETRY_DELAYS_MS for calls
+ * that have a large time budget and should try harder before giving up.
  */
 export async function generateWithRetry(
   model: GenerativeModel,
-  request: Parameters<GenerativeModel["generateContent"]>[0]
+  request: Parameters<GenerativeModel["generateContent"]>[0],
+  retryDelaysMs: number[] = RETRY_DELAYS_MS
 ): Promise<GenerateContentResult> {
   let lastError: unknown;
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+  for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
     try {
       return await model.generateContent(request);
     } catch (error) {
       lastError = error;
-      if (!isRetryableGeminiError(error) || attempt === RETRY_DELAYS_MS.length) throw error;
-      await sleep(RETRY_DELAYS_MS[attempt]);
+      if (!isRetryableGeminiError(error) || attempt === retryDelaysMs.length) throw error;
+      await sleep(retryDelaysMs[attempt]);
     }
   }
   throw lastError;

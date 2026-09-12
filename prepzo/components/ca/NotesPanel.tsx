@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { NotesUploadZone } from "@/components/ca/NotesUploadZone";
+import { GenerateSelector, type GenerateSelectorMode } from "@/components/ca/GenerateSelector";
 import { ProcessingHint } from "@/components/ca/ProcessingHint";
 import { useCaNotes, type NoteStatus } from "@/hooks/useCaNotes";
 import type { ContentBlock } from "@/lib/ca/extraction";
@@ -92,46 +93,20 @@ function GenerateOrLinkAction({
   generateLabel,
   linkLabel,
   icon: Icon,
-  needsReviewCount,
-  onGenerate,
+  onOpenPicker,
 }: {
   count: number;
   href: string;
   generateLabel: string;
   linkLabel: string;
   icon: React.ComponentType<{ size?: number }>;
-  needsReviewCount: number;
-  onGenerate: () => Promise<{ count: number }>;
+  onOpenPicker: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-
-  async function handleClick() {
-    setBusy(true);
-    try {
-      const result = await onGenerate();
-      if (result.count === 0) {
-        toast(
-          needsReviewCount > 0
-            ? "Nothing new confirmed yet — review the blocks below first."
-            : count > 0
-              ? "Nothing new to generate — everything confirmed so far is already included."
-              : "Couldn't find any content to generate from for this note."
-        );
-      } else {
-        toast.success(`Generated ${result.count} ${count > 0 ? "more " : ""}item${result.count === 1 ? "" : "s"}!`);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Generation failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (count > 0) {
-    // Confirming a block that was still "needs your confirmation" at the
-    // time of the first generate click otherwise has no way to ever be
-    // generated — this keeps that path open instead of the link becoming
-    // the only, permanent option once count > 0.
+    // The refresh button reopens the picker rather than regenerating
+    // blindly — it's how a student generates more (more topics, or simply
+    // more items from topics they already used), and it's also the only
+    // route back for a block confirmed after the first generation.
     return (
       <div className="flex flex-1 items-center gap-1.5">
         <Link
@@ -141,12 +116,11 @@ function GenerateOrLinkAction({
           <Icon size={13} /> {linkLabel}
         </Link>
         <button
-          disabled={busy}
-          onClick={handleClick}
-          title="Generate more from any newly confirmed blocks"
-          className="shrink-0 rounded-lg border border-[#E2E8F0] p-2 text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF] disabled:opacity-50"
+          onClick={onOpenPicker}
+          title="Generate more — pick topics and how many"
+          className="shrink-0 rounded-lg border border-[#E2E8F0] p-2 text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF]"
         >
-          {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          <RefreshCw size={13} />
         </button>
       </div>
     );
@@ -154,12 +128,10 @@ function GenerateOrLinkAction({
 
   return (
     <button
-      disabled={busy}
-      onClick={handleClick}
-      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF] disabled:opacity-50"
+      onClick={onOpenPicker}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF]"
     >
-      {busy ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
-      {busy ? "Generating..." : generateLabel}
+      <Icon size={13} /> {generateLabel}
     </button>
   );
 }
@@ -167,14 +139,16 @@ function GenerateOrLinkAction({
 function CheatsheetAction({
   hasCheatsheet,
   href,
-  onGenerate,
+  onOpenPicker,
 }: {
   hasCheatsheet: boolean;
   href: string;
-  onGenerate: () => Promise<void>;
+  onOpenPicker: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-
+  // Once a cheatsheet exists this is a link only — there is deliberately no
+  // regenerate path here, for the same reason Regenerate was removed from
+  // CheatsheetEditor (Phase 7): it can only overwrite the student's own
+  // edits, and there's no versioning to recover them.
   if (hasCheatsheet) {
     return (
       <Link
@@ -186,25 +160,12 @@ function CheatsheetAction({
     );
   }
 
-  async function handleClick() {
-    setBusy(true);
-    try {
-      await onGenerate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create cheatsheet");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <button
-      disabled={busy}
-      onClick={handleClick}
-      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF] disabled:opacity-50"
+      onClick={onOpenPicker}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] transition-opacity hover:border-[#3B5FBF]"
     >
-      {busy ? <Loader2 size={13} className="animate-spin" /> : <NotebookPen size={13} />}
-      {busy ? "Creating..." : "Create Cheatsheet"}
+      <NotebookPen size={13} /> Create Cheatsheet
     </button>
   );
 }
@@ -212,6 +173,10 @@ function CheatsheetAction({
 export function NotesPanel({ papers }: { papers: CaPaper[] }) {
   const { notes, loading, uploadNote, confirmBlock, generateContent, generateCheatsheet, cancelNote } = useCaNotes();
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  // Which note+mode currently has the topic/quantity picker open. Only one
+  // at a time — two open pickers on the same note would be confusing about
+  // what a Generate click applies to.
+  const [picker, setPicker] = useState<{ noteId: string; mode: GenerateSelectorMode } | null>(null);
 
   return (
     <>
@@ -234,6 +199,10 @@ export function NotesPanel({ papers }: { papers: CaPaper[] }) {
           {notes.map((note) => {
             const blocks = note.content_map?.blocks || [];
             const needsReview = blocks.filter((b) => b.status === "needs_confirmation");
+            // Only "auto" blocks are generatable — the same filter the
+            // generate route applies, so the picker can't offer a topic the
+            // server would then silently drop.
+            const generatableBlocks = blocks.filter((b) => b.status === "auto");
             const detectedCount = blocks.filter((b) => b.status !== "skipped").length;
             const isExpanded = expandedNoteId === note.id;
             const hasGeneratedContent = note.questions_count > 0 || note.flashcards_count > 0;
@@ -278,37 +247,60 @@ export function NotesPanel({ papers }: { papers: CaPaper[] }) {
                 )}
 
                 {note.status === "completed" && (
-                  <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E2E8F0] pt-3">
-                    <GenerateOrLinkAction
-                      count={note.questions_count}
-                      href={`/practice?note=${note.id}`}
-                      generateLabel="Create Practice Session"
-                      linkLabel="Practice questions"
-                      icon={PenSquare}
-                      needsReviewCount={needsReview.length}
-                      onGenerate={() => generateContent(note.id, "questions")}
-                    />
-                    <GenerateOrLinkAction
-                      count={note.flashcards_count}
-                      href={`/flashcards?note=${note.id}`}
-                      generateLabel="Generate Flashcards"
-                      linkLabel="Study flashcards"
-                      icon={Layers}
-                      needsReviewCount={needsReview.length}
-                      onGenerate={() => generateContent(note.id, "flashcards")}
-                    />
-                    <Link
-                      href={`/tutor?note=${note.id}`}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] hover:border-[#3B5FBF]"
-                    >
-                      <MessageCircle size={13} /> Ask AI Teacher
-                    </Link>
-                    <CheatsheetAction
-                      hasCheatsheet={note.has_cheatsheet}
-                      href={`/cheatsheet?note=${note.id}`}
-                      onGenerate={() => generateCheatsheet(note.id)}
-                    />
-                  </div>
+                  <>
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E2E8F0] pt-3">
+                      <GenerateOrLinkAction
+                        count={note.questions_count}
+                        href={`/practice?note=${note.id}`}
+                        generateLabel="Create Practice Session"
+                        linkLabel="Practice questions"
+                        icon={PenSquare}
+                        onOpenPicker={() => setPicker({ noteId: note.id, mode: "questions" })}
+                      />
+                      <GenerateOrLinkAction
+                        count={note.flashcards_count}
+                        href={`/flashcards?note=${note.id}`}
+                        generateLabel="Generate Flashcards"
+                        linkLabel="Study flashcards"
+                        icon={Layers}
+                        onOpenPicker={() => setPicker({ noteId: note.id, mode: "flashcards" })}
+                      />
+                      <Link
+                        href={`/tutor?note=${note.id}`}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-semibold text-[#1E3A8A] hover:border-[#3B5FBF]"
+                      >
+                        <MessageCircle size={13} /> Ask AI Teacher
+                      </Link>
+                      <CheatsheetAction
+                        hasCheatsheet={note.has_cheatsheet}
+                        href={`/cheatsheet?note=${note.id}`}
+                        onOpenPicker={() => setPicker({ noteId: note.id, mode: "cheatsheet" })}
+                      />
+                    </div>
+
+                    {picker?.noteId === note.id &&
+                      (generatableBlocks.length > 0 ? (
+                        <GenerateSelector
+                          key={picker.mode}
+                          blocks={generatableBlocks}
+                          mode={picker.mode}
+                          onGenerate={async (blockIds, count) => {
+                            if (picker.mode === "cheatsheet") {
+                              await generateCheatsheet(note.id, blockIds);
+                              return { count: 1 };
+                            }
+                            return generateContent(note.id, picker.mode, { blockIds, count });
+                          }}
+                          onClose={() => setPicker(null)}
+                        />
+                      ) : (
+                        <p className="mt-3 rounded-xl border border-[#CBD5E1] bg-[#F8FAFF] p-4 text-xs text-[#64748B]">
+                          {needsReview.length > 0
+                            ? "No topics are ready yet — confirm the blocks below first, then come back."
+                            : "No usable topics were found in this note."}
+                        </p>
+                      ))}
+                  </>
                 )}
 
                 {needsReview.length > 0 && (

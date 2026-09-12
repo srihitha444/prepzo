@@ -6,6 +6,43 @@ import type { ContentBlock } from "@/lib/ca/extraction";
 
 export type GenerateMode = "questions" | "flashcards";
 
+/** Used when the caller doesn't specify a per-block count. */
+export const DEFAULT_ITEMS_PER_BLOCK = 3;
+
+/**
+ * Splits the student's requested total across the blocks they selected.
+ * Larger blocks (more source text) carry proportionally more, since they
+ * genuinely support more distinct questions, but every selected block gets
+ * at least one — a student who ticked a topic expects something from it.
+ */
+export function splitCountAcrossBlocks(blocks: ContentBlock[], total: number): Record<string, number> {
+  const result: Record<string, number> = {};
+  if (blocks.length === 0) return result;
+  if (total <= blocks.length) {
+    // Not enough to go round — one each, in order, until the total runs out.
+    blocks.forEach((b, i) => {
+      result[b.block_id] = i < total ? 1 : 0;
+    });
+    return result;
+  }
+
+  const weights = blocks.map((b) => Math.max(1, b.raw_content.length));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  let assigned = 0;
+  blocks.forEach((b, i) => {
+    const share = Math.max(1, Math.floor((total * weights[i]) / totalWeight));
+    result[b.block_id] = share;
+    assigned += share;
+  });
+
+  // Rounding leaves a remainder either way — settle it on the largest
+  // block rather than spreading fractions around.
+  const largest = blocks.reduce((a, b) => (a.raw_content.length >= b.raw_content.length ? a : b));
+  result[largest.block_id] += total - assigned;
+  if (result[largest.block_id] < 1) result[largest.block_id] = 1;
+  return result;
+}
+
 export interface GeneratedQuestionRow {
   question_type: "mcq" | "descriptive";
   subject: string;
@@ -18,7 +55,6 @@ export interface GeneratedQuestionRow {
   option_c: string | null;
   option_d: string | null;
   correct_option: string | null;
-  negative_marking: boolean;
   negative_marking_value: number;
   marks: number | null;
   model_answer: string | null;
@@ -172,8 +208,23 @@ export async function generateForBlocks(params: {
   level: CaLevel;
   blocks: ContentBlock[];
   mode: GenerateMode;
+  /**
+   * How many items to produce for each block, keyed by block_id — derived
+   * from the total the student asked for, split across their selected
+   * blocks (see splitCountAcrossBlocks). Blocks missing from the map fall
+   * back to DEFAULT_ITEMS_PER_BLOCK.
+   */
+  countByBlock?: Record<string, number>;
+  /**
+   * Items already sitting in the shared pool for each block, so a top-up
+   * run produces genuinely NEW items instead of near-duplicates of what a
+   * previous student already generated. Keyed by block_id. Only the item
+   * text is needed — enough for the model to avoid repeating itself,
+   * without paying to send full payloads back.
+   */
+  existingByBlock?: Record<string, string[]>;
 }): Promise<{ questions: GeneratedQuestionRow[]; flashcards: GeneratedFlashcardRow[] }> {
-  const { noteId, level, blocks, mode } = params;
+  const { noteId, level, blocks, mode, countByBlock, existingByBlock } = params;
   const usable = blocks.filter((b) => b.paper);
   if (usable.length === 0) return { questions: [], flashcards: [] };
 
@@ -181,16 +232,30 @@ export async function generateForBlocks(params: {
     .map((block) => {
       const paper = getPaperByCode(block.paper!);
       if (!paper) return null;
+      const count = countByBlock?.[block.block_id] ?? DEFAULT_ITEMS_PER_BLOCK;
+      if (count <= 0) return null;
       const rules =
         mode === "questions"
-          ? buildQuestionRules(getFormatClass(paper, level), block.content_type, paper)
-          : buildFlashcardRules(block.content_type, level);
+          ? buildQuestionRules(getFormatClass(paper, level), block.content_type, paper, count)
+          : buildFlashcardRules(block.content_type, level, count);
       const label = mode === "questions" ? "Questions to generate for this block" : "Flashcards to generate for this block";
+
+      // Top-up run: the pool already holds items for this block, so the
+      // source has been mined at least once. Show what exists (text only)
+      // and require genuinely different items — otherwise generating from
+      // the same passage twice converges on the same handful of questions.
+      const existing = existingByBlock?.[block.block_id] || [];
+      const existingNote = existing.length
+        ? `\nAlready generated for this block — every new item must be clearly different from all of these, testing something these do not:\n${existing
+            .map((t, i) => `${i + 1}. ${t}`)
+            .join("\n")}`
+        : "";
+
       return `BLOCK ${block.block_id} (paper: ${paper.code} ${paper.name}, content_type: ${block.content_type}, topic: ${block.topic}):
 """
 ${block.raw_content}
 """
-${label}: ${rules}`;
+${label}: ${rules}${existingNote}`;
     })
     .filter((s): s is string => Boolean(s));
 
@@ -206,7 +271,9 @@ Rules for every item:
 ${mode === "questions" ? `- mcq questions: correct_option is exactly one of "A","B","C","D"
 - descriptive questions: include a mark_allocation array like [{"step":"...","marks":1}, ...] summing to the question's marks
 - difficulty (mcq only) is one of "Easy","Medium","Hard"` : ""}
-- Never invent section numbers or standard numbers not present in the source content
+- Produce the exact number of items each block asks for. A block's source text may not support that many genuinely distinct items on its own — when you have exhausted what the source can test without repeating yourself, keep going using the block's TOPIC as the subject, drawing on standard Indian CA syllabus knowledge for that topic at the ${level} level. Items produced this way must still be unmistakably Indian CA content (Indian Acts, Indian standards, ₹ amounts) and pitched at ${level}, never generic or international.
+- For any item that goes beyond the source content: test concepts, application, classification, treatment, sequence, which provision applies, and reasoning about a scenario. Do NOT build such an item around a specific monetary threshold, exemption limit, turnover/registration limit, deduction cap, tax rate, slab, due date or penalty amount unless that exact figure appears in the source content above — those change with each Finance Act and a wrong figure teaches the student something false. Structure and reasoning are safe to draw from knowledge; specific current-year numbers are not.
+- Never invent section numbers or standard numbers not present in the source content, EXCEPT where you are drawing on the block's topic beyond the source — there, cite only long-standing, well-established section/standard numbers you are confident of, and omit the citation entirely rather than guessing at one
 - Any tabular content (balance sheets, ledgers, trial balances, journal entries) must be a proper markdown table — a header row, a \`|---|---|\` separator row, then one data row per line. Never flatten a table's rows/columns into a single run-on line of text separated by "|".
 - If a question has multiple lettered/numbered sub-parts — (i)/(ii)/(iii), (a)/(b)/(c), or similar — put each sub-part on its own line (separate it from the next with a blank line), keeping its label. Never run sub-parts together into one continuous paragraph.
 ${mode === "questions" ? `- When a block's instructions say to generate a shared case/scenario passage: put the passage once under that block's "case_studies[].passage", and list ONLY the MCQs testing it under "case_studies[].questions" — never duplicate the passage into each question's own question_text, and never also repeat those questions under the block's top-level "questions" array. A question with no shared passage belongs in "questions", not in a case_studies group of its own.` : ""}
@@ -255,7 +322,6 @@ ${RESULT_SHAPE_BY_MODE[mode]}`;
           option_c: isMcq ? q.option_c ?? null : null,
           option_d: isMcq ? q.option_d ?? null : null,
           correct_option: isMcq ? q.correct_option ?? null : null,
-          negative_marking: isMcq ? (q.negative_marking_value ?? 0) > 0 : false,
           negative_marking_value: isMcq ? q.negative_marking_value ?? 0 : 0,
           marks: !isMcq ? q.marks ?? null : null,
           model_answer: !isMcq ? q.model_answer ?? null : null,

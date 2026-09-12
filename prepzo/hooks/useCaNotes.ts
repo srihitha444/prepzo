@@ -99,12 +99,12 @@ export function useCaNotes() {
   }, [notes, fetchNotes]);
 
   async function uploadNote(file: File, title?: string): Promise<{ note_id: string }> {
-    const { filePath, mimeType, pageCount } = await uploadFileToStorage({ file, bucket: "ca-notes" });
+    const { filePath, mimeType, pageCount, fileHash } = await uploadFileToStorage({ file, bucket: "ca-notes" });
 
     const res = await fetch("/api/ca/notes/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_path: filePath, mime_type: mimeType, page_count: pageCount, title }),
+      body: JSON.stringify({ file_path: filePath, mime_type: mimeType, page_count: pageCount, file_hash: fileHash, title }),
     });
     const json = await safeParseJson(res);
     if (!res.ok) throw new Error(json.error || "Upload failed");
@@ -128,23 +128,29 @@ export function useCaNotes() {
     await fetchNotes();
   }
 
-  async function generateContent(noteId: string, mode: "questions" | "flashcards"): Promise<{ count: number }> {
+  async function generateContent(
+    noteId: string,
+    mode: "questions" | "flashcards",
+    // Omitted entirely = the old whole-note behaviour (every auto block,
+    // default quantity). The picker passes both.
+    options?: { blockIds?: string[]; count?: number }
+  ): Promise<{ count: number; from_cache?: number }> {
     const res = await fetch("/api/ca/notes/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note_id: noteId, mode }),
+      body: JSON.stringify({ note_id: noteId, mode, block_ids: options?.blockIds, count: options?.count }),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || "Failed to generate content");
     await fetchNotes();
-    return json;
+    return json as { count: number; from_cache?: number };
   }
 
-  async function generateCheatsheet(noteId: string): Promise<void> {
+  async function generateCheatsheet(noteId: string, blockIds?: string[]): Promise<void> {
     const res = await fetch("/api/ca/cheatsheets/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note_id: noteId }),
+      body: JSON.stringify({ note_id: noteId, block_ids: blockIds }),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || "Failed to generate cheatsheet");

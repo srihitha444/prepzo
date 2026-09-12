@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { validateUploadFile } from "@/lib/ca/clientUpload";
+import { validateUploadFile, MAX_FILE_MB } from "@/lib/ca/clientUpload";
 
 export function NotesUploadZone({ onUpload }: { onUpload: (file: File) => Promise<void> }) {
   const [dragOver, setDragOver] = useState(false);
@@ -64,7 +64,7 @@ export function NotesUploadZone({ onUpload }: { onUpload: (file: File) => Promis
         <p className="text-sm font-semibold text-[#0F172A]">
           {uploading ? "Uploading..." : "Drag & drop your notes here"}
         </p>
-        <p className="mt-1 text-xs text-[#64748B]">PDF, JPG, PNG, or WEBP · up to 20MB · or click to browse</p>
+        <p className="mt-1 text-xs text-[#64748B]">PDF, JPG, PNG, or WEBP · up to {MAX_FILE_MB}MB · or click to browse</p>
       </div>
     </div>
   );

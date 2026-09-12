@@ -24,6 +24,8 @@ interface AnswerRecord {
   correct: boolean;
   attempted: boolean;
   negativeMarkingValue: number;
+  selectedOption: string | null;
+  evaluation: AnswerEvaluation | null;
 }
 
 /**
@@ -100,12 +102,18 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
     });
   }
 
-  async function handleAnswer(option: string | null) {
+  function selectOption(option: string) {
+    if (answered) return;
+    setSelectedOption(option);
+  }
+
+  async function submitMcqAnswer() {
     if (answered) return;
     const question = questions[currentIndex];
     if (!question) return;
 
-    setSelectedOption(option);
+    const option = selectedOption;
+    if (!option) return;
     setAnswered(true);
 
     const isCorrect = option !== null && option.trim().toUpperCase() === (question.correct_option || "").trim().toUpperCase();
@@ -122,7 +130,14 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
 
     setAnswers((prev) => [
       ...prev,
-      { questionId: question.id, correct: isCorrect, attempted: option !== null, negativeMarkingValue: question.negative_marking_value },
+      {
+        questionId: question.id,
+        correct: isCorrect,
+        attempted: option !== null,
+        negativeMarkingValue: question.negative_marking_value,
+        selectedOption: option,
+        evaluation: null,
+      },
     ]);
   }
 
@@ -147,11 +162,27 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
       setAnswered(true);
       setAnswers((prev) => [
         ...prev,
-        { questionId: question.id, correct: json.percentage >= 50, attempted: true, negativeMarkingValue: 0 },
+        {
+          questionId: question.id,
+          correct: json.percentage >= 50,
+          attempted: true,
+          negativeMarkingValue: 0,
+          selectedOption: null,
+          evaluation: json as AnswerEvaluation,
+        },
       ]);
     } finally {
       setEvaluating(false);
     }
+  }
+
+  function showQuestion(index: number) {
+    const savedAnswer = answers.find((answer) => answer.questionId === questions[index]?.id);
+    setCurrentIndex(index);
+    setSelectedOption(savedAnswer?.selectedOption ?? null);
+    setAnswered(Boolean(savedAnswer));
+    setEvaluation(savedAnswer?.evaluation ?? null);
+    if (!savedAnswer) questionStartRef.current = Date.now();
   }
 
   async function nextQuestion() {
@@ -160,11 +191,12 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
       await logSessionOnce(answers);
       return;
     }
-    setCurrentIndex((i) => i + 1);
-    setSelectedOption(null);
-    setAnswered(false);
-    setEvaluation(null);
-    questionStartRef.current = Date.now();
+    showQuestion(currentIndex + 1);
+  }
+
+  function previousQuestion() {
+    if (currentIndex === 0) return;
+    showQuestion(currentIndex - 1);
   }
 
   function practiceAgain() {
@@ -189,9 +221,11 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
     evaluation,
     evaluating,
     stats: { correct, wrong, skipped, score, total: answers.length },
-    handleAnswer,
+    selectOption,
+    submitMcqAnswer,
     submitDescriptiveAnswer,
     nextQuestion,
+    previousQuestion,
     practiceAgain,
   };
 }

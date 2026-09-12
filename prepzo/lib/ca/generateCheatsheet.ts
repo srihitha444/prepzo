@@ -14,12 +14,22 @@ export async function generateCheatsheet(params: {
   userId: string;
   noteId: string;
   noteTitle: string;
+  /**
+   * The topics the student ticked. Omitted = the whole note, which is how
+   * this behaved before the picker existed and remains the default for any
+   * caller that doesn't care.
+   */
+  blockIds?: string[];
 }): Promise<string> {
-  const { supabase, userId, noteId, noteTitle } = params;
+  const { supabase, userId, noteId, noteTitle, blockIds } = params;
 
-  const noteContent = await fetchNoteContext(supabase, userId, noteId);
+  const noteContent = await fetchNoteContext(supabase, userId, noteId, undefined, blockIds);
   if (!noteContent) {
-    throw new Error("This note has no extracted content to build a cheatsheet from");
+    throw new Error(
+      blockIds && blockIds.length > 0
+        ? "The selected topics have no extracted content to build a cheatsheet from"
+        : "This note has no extracted content to build a cheatsheet from"
+    );
   }
 
   const prompt = `You are creating a condensed study cheatsheet for a CA (Chartered Accountancy) student from their own uploaded note, "${noteTitle}".
@@ -27,10 +37,11 @@ export async function generateCheatsheet(params: {
 SOURCE CONTENT:
 ${noteContent}
 
-Produce a concise, well-organized markdown cheatsheet covering:
+Produce a concise, well-organized markdown cheatsheet covering, wherever the source content includes them:
 - Key definitions
 - Formulas
-- Section/standard references (exact numbers, never invented)
+- Section/standard/act references (exact numbers, never invented) — including specific tax section codes (e.g. Income Tax Act, GST/CGST/SGST Act, Companies Act sections) where the source is a tax or law topic
+- Monetary and numeric thresholds/limits — exemption limits, turnover/registration thresholds, deduction caps, rate slabs, due dates, penalty amounts — exact figures as printed, never invented or rounded
 - Must-remember points and distinctions
 
 Rules:

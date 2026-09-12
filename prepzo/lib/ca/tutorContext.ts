@@ -27,7 +27,14 @@ export async function fetchNoteContext(
   supabase: any,
   userId: string,
   noteId?: string,
-  charBudget: number = DEFAULT_CHAR_BUDGET
+  charBudget: number = DEFAULT_CHAR_BUDGET,
+  /**
+   * Restrict to specific blocks within the note — the topics a student
+   * ticked in the generate picker. Undefined means every usable block,
+   * which is what AI Teacher always wants (it shouldn't be blinkered to a
+   * subset mid-conversation) and what a whole-note cheatsheet wants.
+   */
+  blockIds?: string[]
 ): Promise<string | null> {
   let query = supabase
     .from("user_notes")
@@ -43,11 +50,13 @@ export async function fetchNoteContext(
 
   let remaining = charBudget;
   const sections: string[] = [];
+  const wanted = blockIds && blockIds.length > 0 ? new Set(blockIds) : null;
 
   outer: for (const note of notes) {
     const blocks = note.content_map?.blocks || [];
     for (const block of blocks) {
       if (block.status === "skipped" || !block.raw_content?.trim()) continue;
+      if (wanted && !wanted.has(block.block_id)) continue;
 
       const header = `[Note: "${note.title}" · Paper: ${block.paper_name || "unspecified"} · Topic: ${block.topic}]`;
       const section = `${header}\n${block.raw_content.trim()}`;

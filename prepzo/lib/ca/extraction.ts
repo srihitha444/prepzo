@@ -1,5 +1,5 @@
-import { randomUUID } from "crypto";
-import { getContentModel, generateWithRetry } from "@/lib/gemini";
+import { createHash, randomUUID } from "crypto";
+import { getContentModel, generateWithRetry, PATIENT_RETRY_DELAYS_MS } from "@/lib/gemini";
 import { getPaperByCode, getPapersForLevel, type CaLevel, type CaPaper } from "@/lib/ca-syllabus";
 import type { ContentType } from "@/lib/ca/templates";
 
@@ -56,6 +56,24 @@ function isContentType(value: unknown): value is ContentType {
   return value === "text" || value === "table" || value === "formula" || value === "legal" || value === "diagram";
 }
 
+/**
+ * Blocks the model itself labelled `table` but returned with no markdown
+ * separator row — i.e. it recognised tabular content and then flattened the
+ * rows/columns away anyway, which is the one extraction defect that cannot
+ * be repaired downstream: content_map is written exactly once
+ * (lib/ca/processNote.ts) and no code path ever re-reads the source file,
+ * so every later consumer (cheatsheet, question/flashcard generation, AI
+ * Teacher) inherits the flattened text permanently.
+ *
+ * Deliberately only reports — it does not downgrade the block's status.
+ * `needs_confirmation` means "the student should confirm which paper this
+ * maps to", a different question entirely, and overloading it would put a
+ * formatting problem in front of the student as a mapping one.
+ */
+export function findFlattenedTableBlocks(blocks: ContentBlock[]): ContentBlock[] {
+  return blocks.filter((b) => b.content_type === "table" && !b.raw_content.includes("|---"));
+}
+
 export async function extractAndMapContent(params: {
   fileBuffer: Buffer;
   mimeType: string;
@@ -72,7 +90,30 @@ export async function extractAndMapContent(params: {
 
   const prompt = `You are analysing a CA ${profile.ca_level} student's uploaded study notes.
 
-Extract all content from this document and split it into topic-sized blocks. Each block becomes one study session downstream (flashcards and practice questions are generated per block, one session per block) — so a block must be sized like a realistic 15-20 minute study sitting (roughly enough content to support 6-14 flashcards), never one block per sub-heading. A 150-200 page book should produce roughly 10-15 blocks total; scale proportionally for shorter or longer documents. Splitting on every heading is wrong even if the source document itself has many small sub-headings — group by studyable topic, not by heading.
+${EXTRACTION_RULES_HEAD}
+${paperList}
+${EXTRACTION_RULES_TAIL}`;
+
+  const model = getContentModel();
+  const result = await generateWithRetry(
+    model,
+    [
+      { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
+      { text: prompt },
+    ],
+    PATIENT_RETRY_DELAYS_MS
+  );
+  return parseExtractionResponse(result.response.text());
+}
+
+// The static half of the extraction prompt, split out from the per-student
+// interpolation (level, candidate paper list) for one reason: it is what
+// EXTRACTION_PROMPT_HASH hashes. A cached content_map records the hash of
+// the rules that produced it, so editing anything below automatically
+// invalidates and refreshes every cached derivation instead of leaving
+// students permanently on an older, worse extraction. Nothing needs to be
+// bumped by hand — see lib/ca/extractionCache.ts.
+const EXTRACTION_RULES_HEAD = `Extract all content from this document and split it into topic-sized blocks. Each block becomes one study session downstream (flashcards and practice questions are generated per block, one session per block) — so a block must be sized like a realistic 15-20 minute study sitting (roughly enough content to support 6-14 flashcards), never one block per sub-heading. A 150-200 page book should produce roughly 10-15 blocks total; scale proportionally for shorter or longer documents. Splitting on every heading is wrong even if the source document itself has many small sub-headings — group by studyable topic, not by heading.
 
 Grouping rules:
 - Merge small related sub-topics (a single definition, a short case-law note, a brief distinction — anything that alone would only support 1-3 flashcards) into their parent/chapter topic's block rather than giving each one its own block.
@@ -83,10 +124,10 @@ Grouping rules:
 For each block:
 - Classify content_type as one of: text, table, formula, legal, diagram
 - Identify a short topic label (e.g. "Depreciation", "Section 11 - Free Consent")
-- Extract the content itself into raw_content (preserve table structure as markdown, preserve exact section numbers and Act names for legal content, preserve formulas as plain text)
-- Map the block to the single best-matching paper from this list, using keyword signals (e.g. journal/ledger/depreciation -> Accounting; contract/offer/acceptance -> Business Laws; ratio/probability -> Quantitative Aptitude; demand/supply/GDP -> Economics; AS/Ind AS/Schedule III -> Advanced Accounting; SEBI/FEMA/NCLT -> Corporate Law; income tax/GST -> Taxation; cost sheet/budgeting -> Costing; SA/audit -> Auditing; NPV/IRR/WACC -> Financial Management):
-${paperList}
-- Give a confidence score 0-100 for the paper mapping. Score below 40 if you cannot confidently identify the paper at all.
+- Extract the content itself into raw_content (preserve exact section numbers and Act names for legal content, preserve formulas as plain text). Any tabular content — rate tables, comparisons, balance sheets, ledgers, trial balances, journal entries — must be a proper markdown table: a header row, a \`|---|---|\` separator row, then one data row per line. Never flatten a table's rows and columns into a single run-on line separated by "|", and never emit the cells as a plain list of values — both destroy the row/column relationships, which cannot be recovered later.
+- Map the block to the single best-matching paper from this list, using keyword signals (e.g. journal/ledger/depreciation -> Accounting; contract/offer/acceptance -> Business Laws; ratio/probability -> Quantitative Aptitude; demand/supply/GDP -> Economics; AS/Ind AS/Schedule III -> Advanced Accounting; SEBI/FEMA/NCLT -> Corporate Law; income tax/GST -> Taxation; cost sheet/budgeting -> Costing; SA/audit -> Auditing; NPV/IRR/WACC -> Financial Management):`;
+
+const EXTRACTION_RULES_TAIL = `- Give a confidence score 0-100 for the paper mapping. Score below 40 if you cannot confidently identify the paper at all.
 
 Ignore and do not create blocks for: page headers/footers, logos/watermarks, table of contents, index pages, bibliography, blank pages, signature blocks, "intentionally left blank" notices.
 
@@ -103,13 +144,19 @@ Return strict JSON only, matching this shape:
   ]
 }`;
 
-  const model = getContentModel();
-  const result = await generateWithRetry(model, [
-    { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
-    { text: prompt },
-  ]);
+/**
+ * Identifies the extraction rules that produced a given content_map.
+ * Stored alongside every cached derivation so that changing the rules above
+ * refreshes stale entries automatically rather than requiring anyone to
+ * remember a manual step — the failure mode of forgetting is silent, and
+ * would leave the most-uploaded documents permanently on the oldest
+ * extraction.
+ */
+export const EXTRACTION_PROMPT_HASH = createHash("sha256")
+  .update(EXTRACTION_RULES_HEAD + EXTRACTION_RULES_TAIL)
+  .digest("hex");
 
-  const text = result.response.text();
+function parseExtractionResponse(text: string): ContentMap {
   let parsed: { blocks?: RawBlock[] };
   try {
     parsed = JSON.parse(text);

@@ -19,7 +19,6 @@ export function CheatsheetWorkspace({ initialNoteId }: { initialNoteId?: string 
           <CheatsheetEditor
             key={activeSheet.id}
             cheatsheetId={activeSheet.id}
-            noteId={activeSheet.noteId}
             noteTitle={activeSheet.title}
             onChanged={refetch}
           />

@@ -14,7 +14,31 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://ca.localhost:3000/ --connect-timeout 3)",
       "Bash(curl -s --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/ -o /tmp/ca-root.html -w \"%{http_code}\\\\n\")",
       "Bash(curl -v --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/)",
-      "Bash(curl -s --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/ -o /tmp/ca-root2.html -w \"%{http_code}\\\\n\")"
+      "Bash(curl -s --resolve ca.localhost:3000:127.0.0.1 http://ca.localhost:3000/ -o /tmp/ca-root2.html -w \"%{http_code}\\\\n\")",
+      "Bash(git rev-list *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(break)",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/ca/auth/login\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/ca/auth/reset-password\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code} %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/confirm\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code}\\\\n\" \"http://localhost:3000/\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code} %{redirect_url}\\\\n\" \"http://localhost:3000/auth/confirm\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code} %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/ca/auth/confirm\")",
+      "Bash(curl -s -o /dev/null -m 60 -w \"%{http_code} %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/callback\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(curl -s -o /dev/null -m 90 -w \"%{http_code} -> %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/confirm\")",
+      "Bash(curl -s -o /dev/null -m 90 -w \"%{http_code} -> %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/confirm?token_hash=bogus&type=recovery&next=http://ca.localhost/ca/auth/reset-password\")",
+      "Bash(curl -s -o /dev/null -m 30 -w \"server: %{http_code}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/\")",
+      "Bash(command -v chromium-cli)",
+      "Bash(curl -s -o /dev/null -m 90 -w \"  no token:  %{http_code} -> %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/confirm\")",
+      "Bash(curl -s -o /dev/null -m 90 -w \"  bad token: %{http_code} -> %{redirect_url}\\\\n\" -H \"Host: ca.localhost\" \"http://localhost:3000/auth/confirm?token_hash=bogus&type=recovery&next=http://ca.localhost/ca/auth/reset-password\")",
+      "Bash(grep -o '\"level\":\"ERROR\",\"message\":\"[^\"]\\\\{0,90\\\\}')",
+      "Bash(curl -s -m 90 -H \"Host: ca.localhost:3000\" \"http://localhost:3000/\")",
+      "Bash(curl -s -m 90 -D /tmp/h.txt \"http://localhost:3000/?preview=ca\")",
+      "Bash(npx eslint *)",
+      "Bash(curl -s -m 90 -o /dev/null -w \"%{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -H \"Host: ca.localhost\" -d '{\"note_id\":\"00000000-0000-0000-0000-000000000000\"}' \"http://localhost:3000/api/ca/notes/reextract\")",
+      "Bash(curl -s -m 90 -X POST -H \"Content-Type: application/json\" -H \"Host: ca.localhost\" -d '{}' \"http://localhost:3000/api/ca/notes/reextract\")"
     ]
   }
 }

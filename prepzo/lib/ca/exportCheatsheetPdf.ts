@@ -40,6 +40,18 @@ function stripInlineMarkdown(text: string): string {
     .replace(/`([^`]*)`/g, "$1");
 }
 
+// jsPDF's built-in "helvetica" font only covers WinAnsi/Latin-1 glyphs — it
+// has no ₹ (Indian Rupee sign), even though the cheatsheet generation prompt
+// explicitly requires "₹ symbol for amounts" for monetary content. Hitting
+// that glyph doesn't just drop the character — it breaks that whole line's
+// character spacing/kerning in jsPDF's Standard-fonts fallback, which is why
+// only lines with a ₹ in them render with letters spread far apart while
+// every other line is fine. Swapped to "Rs." for the PDF only — the in-app
+// preview (QuestionText.tsx, a real browser) renders ₹ correctly already.
+function sanitizeForPdfFont(text: string): string {
+  return text.replace(/₹\s?/g, "Rs. ");
+}
+
 function leadingIndentLevel(rawLine: string): number {
   const spaces = rawLine.match(/^ */)?.[0].length ?? 0;
   return Math.min(Math.floor(spaces / 2), 3);
@@ -80,7 +92,7 @@ export async function exportCheatsheetPdf(title: string, content: string): Promi
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.setTextColor(15, 23, 42);
-  const titleLines = doc.splitTextToSize(title, maxWidth) as string[];
+  const titleLines = doc.splitTextToSize(sanitizeForPdfFont(title), maxWidth) as string[];
   doc.text(titleLines, PAGE_MARGIN, y);
   y += titleLines.length * 22 + 16;
 
@@ -104,8 +116,8 @@ export async function exportCheatsheetPdf(title: string, content: string): Promi
     }
   }
 
-  for (const rawLine of content.split("\n")) {
-    const line = rawLine.trimEnd();
+  for (const untreatedLine of content.split("\n")) {
+    const line = sanitizeForPdfFont(untreatedLine).trimEnd();
     const trimmed = line.trim();
 
     if (!trimmed) {
