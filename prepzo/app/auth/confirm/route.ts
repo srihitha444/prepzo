@@ -23,13 +23,7 @@ export async function GET(request: Request) {
   const host = (request.headers.get("host") || new URL(request.url).host).toLowerCase();
   const protocol = host.includes("localhost") ? "http" : "https";
   const origin = `${protocol}://${host}`;
-  const isCaHost =
-    host.includes("ca.prepzo.study") ||
-    host.includes(".ca.prepzo.study") ||
-    host.includes("ca.localhost") ||
-    host.includes("www.ca.localhost") ||
-    host.includes("www.ca.prepzo.study");
-  const loginPath = isCaHost ? "/ca/auth/login" : "/auth/login";
+  const loginPath = "/auth/login";
   // `next` is whatever was passed as `redirectTo` to resetPasswordForEmail
   // (a full absolute URL) — pass it through as-is; only prefix it with
   // this route's own origin if it arrived as a bare path.

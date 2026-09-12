@@ -13,7 +13,7 @@ interface ResetPasswordFormProps {
 }
 
 // Reached via the reset-password email link, which routes through
-// /auth/callback (or /ca/auth/callback) first — by the time this page
+// /auth/callback first — by the time this page
 // renders, exchangeCodeForSession has already run and the browser holds an
 // authenticated session for the account that requested the reset, so this
 // only needs to collect the new password and call updateUser.

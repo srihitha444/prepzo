@@ -12,7 +12,7 @@ export default async function CaPracticePage({
   const { note: noteId } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/ca/auth/login");
+  if (!user) redirect("/auth/login");
 
   const { data: profileRaw } = await supabase
     .from("profiles")
@@ -20,7 +20,7 @@ export default async function CaPracticePage({
     .eq("id", user.id)
     .single();
   const profile = profileRaw as Profile | null;
-  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/ca/onboarding");
+  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/onboarding");
 
   const papers = (profile.ca_papers || [])
     .map((code) => getPaperByCode(code))

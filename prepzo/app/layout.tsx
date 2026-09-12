@@ -25,16 +25,16 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.prepzo.study"),
+  metadataBase: new URL("https://ca.prepzo.study"),
   title: {
-    default: "Prepzo - NEET Preparation, MCQs and Study Tools",
-    template: "%s | Prepzo",
+    default: "Prepzo CA - Chartered Accountancy Preparation",
+    template: "%s | Prepzo CA",
   },
   description:
-    "Prepare for NEET with timed MCQs, smart flashcards, spaced repetition, a NEET countdown, and a free Pomodoro study timer.",
-  keywords: ["NEET preparation", "NEET exam", "NEET MCQs", "exam prep India"],
-  applicationName: "Prepzo",
-  authors: [{ name: "Prepzo", url: "https://www.prepzo.study" }],
+    "Upload your CA study notes and Prepzo turns them into MCQs and flashcards, tailored to your level and group.",
+  keywords: ["CA preparation", "CA Foundation", "CA Intermediate", "CA Final", "ICAI exam prep"],
+  applicationName: "Prepzo CA",
+  authors: [{ name: "Prepzo", url: "https://ca.prepzo.study" }],
   creator: "Prepzo",
   publisher: "Prepzo",
   alternates: {
@@ -52,17 +52,17 @@ export const metadata: Metadata = {
     apple: "/prepzo-icon.png",
   },
   openGraph: {
-    title: "Prepzo - NEET Preparation, MCQs and Study Tools",
+    title: "Prepzo CA - Chartered Accountancy Preparation",
     description:
-      "Timed MCQs, smart flashcards, spaced repetition, and free study tools for NEET aspirants.",
+      "Turn your own CA notes into practice questions, flashcards and cheatsheets, with an AI teacher that knows your syllabus.",
     type: "website",
     url: "/",
-    siteName: "Prepzo",
+    siteName: "Prepzo CA",
   },
   twitter: {
     card: "summary",
-    title: "Prepzo - NEET Preparation and Study Tools",
-    description: "NEET MCQs, flashcards, countdown, and Pomodoro tools for focused preparation.",
+    title: "Prepzo CA - Chartered Accountancy Preparation",
+    description: "Practice questions, flashcards and cheatsheets generated from your own CA study material.",
   },
 };
 

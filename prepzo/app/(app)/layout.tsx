@@ -13,7 +13,7 @@ export default async function CaAppLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/ca/auth/login");
+    redirect("/auth/login");
   }
 
   const { data: profileRaw } = await supabase
@@ -24,7 +24,7 @@ export default async function CaAppLayout({
   const profile = profileRaw as Profile | null;
 
   if (profile?.exam !== "CA" || !profile.ca_level) {
-    redirect("/ca/onboarding");
+    redirect("/onboarding");
   }
 
   return (

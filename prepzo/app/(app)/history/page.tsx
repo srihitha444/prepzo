@@ -45,7 +45,7 @@ function formatDate(iso: string): string {
 export default async function CaHistoryPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/ca/auth/login");
+  if (!user) redirect("/auth/login");
 
   const [{ data: quizRaw }, { data: flashcardRaw }, { data: mockTestRaw }, { data: notesRaw }] = await Promise.all([
     supabase

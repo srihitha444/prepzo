@@ -62,7 +62,7 @@ export default function CaOnboardingPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      router.push("/ca/auth/login");
+      router.push("/auth/login");
       return;
     }
 

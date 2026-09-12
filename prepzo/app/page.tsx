@@ -15,16 +15,7 @@ export default function CaLandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("code") || params.has("error")) {
-      const hostname = window.location.hostname.toLowerCase();
-      const preview = new URLSearchParams(window.location.search).get("preview")?.toLowerCase();
-      const isCaVertical =
-        preview === "ca" ||
-        hostname === "ca.prepzo.study" ||
-        hostname === "www.ca.prepzo.study" ||
-        hostname.endsWith(".ca.prepzo.study") ||
-        hostname === "ca.localhost" ||
-        hostname === "www.ca.localhost";
-      const callbackPath = isCaVertical ? "/ca/auth/callback" : "/auth/callback";
+      const callbackPath = "/auth/callback";
       const callbackUrl = `${callbackPath}${window.location.search}`;
       window.location.replace(callbackUrl);
     }
@@ -42,14 +33,14 @@ export default function CaLandingPage() {
             <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Features
             </a>
-            <Link href="/ca/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
+            <Link href="/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
               Login
             </Link>
-            <Link href="/ca/auth/signup" className="px-5 py-2.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-sm font-semibold transition-all">
+            <Link href="/auth/signup" className="px-5 py-2.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-sm font-semibold transition-all">
               Try for Free
             </Link>
           </nav>
-          <Link href="/ca/auth/signup" className="md:hidden px-4 py-2 rounded-xl bg-[#1E3A8A] text-white text-sm font-semibold">
+          <Link href="/auth/signup" className="md:hidden px-4 py-2 rounded-xl bg-[#1E3A8A] text-white text-sm font-semibold">
             Try for Free
           </Link>
         </div>
@@ -76,7 +67,7 @@ export default function CaLandingPage() {
                 automatically — so you spend your time practicing, not making cards.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
-                <Link href="/ca/auth/signup" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-base font-semibold transition-all shadow-lg shadow-[#1E3A8A]/30">
+                <Link href="/auth/signup" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-base font-semibold transition-all shadow-lg shadow-[#1E3A8A]/30">
                   Explore CA Vertical
                 </Link>
                 <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white hover:bg-[#F8FAFF] border border-[#E2E8F0] text-[#0F172A] text-base font-semibold transition-all flex items-center justify-center gap-2">
@@ -169,8 +160,8 @@ export default function CaLandingPage() {
           <div className="flex flex-1 justify-end">
             <div className="grid gap-4 text-sm font-medium text-[#64748B] md:grid-cols-2 md:justify-items-end md:text-right">
               <div className="flex flex-col gap-2">
-                <Link href="/ca/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
-                <Link href="/ca/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
+                <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
+                <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
               </div>
               <div className="flex flex-col gap-2">
                 <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>

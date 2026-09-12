@@ -4,23 +4,23 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/tools/", "/privacy-policy", "/terms"],
+      allow: ["/", "/privacy-policy", "/terms"],
       disallow: [
         "/api/",
-        "/admin/",
         "/auth/",
+        "/cheatsheet",
         "/dashboard",
-        "/decks",
         "/flashcards",
+        "/history",
+        "/mock-test",
+        "/notes",
         "/onboarding",
-        "/progress",
-        "/pyq",
-        "/quiz",
+        "/practice",
         "/settings",
-        "/upgrade",
+        "/tutor",
       ],
     },
-    sitemap: "https://www.prepzo.study/sitemap.xml",
-    host: "https://www.prepzo.study",
+    sitemap: "https://ca.prepzo.study/sitemap.xml",
+    host: "https://ca.prepzo.study",
   };
 }

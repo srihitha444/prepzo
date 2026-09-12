@@ -11,11 +11,11 @@ export default async function CaCheatsheetPage({
   const { note: noteId } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/ca/auth/login");
+  if (!user) redirect("/auth/login");
 
   const { data: profileRaw } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   const profile = profileRaw as Profile | null;
-  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/ca/onboarding");
+  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/onboarding");
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

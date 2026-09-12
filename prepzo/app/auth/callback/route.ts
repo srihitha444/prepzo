@@ -20,13 +20,7 @@ export async function GET(request: Request) {
   const incomingCookieNames = (await cookies()).getAll().map((c) => c.name);
   console.log("[auth/callback DEBUG] host:", host, "| origin:", origin, "| url:", request.url);
   console.log("[auth/callback DEBUG] incoming cookie names:", incomingCookieNames);
-  const isCaHost =
-    host.includes("ca.prepzo.study") ||
-    host.includes(".ca.prepzo.study") ||
-    host.includes("ca.localhost") ||
-    host.includes("www.ca.localhost") ||
-    host.includes("www.ca.prepzo.study");
-  const loginPath = isCaHost ? "/ca/auth/login" : "/auth/login";
+  const loginPath = "/auth/login";
 
   if (providerError) {
     return NextResponse.redirect(
@@ -48,7 +42,7 @@ export async function GET(request: Request) {
 
         const profileData = profile as { exam: string | null } | null;
         if (!profileData?.exam) {
-          return NextResponse.redirect(`${origin}${isCaHost ? "/ca/onboarding" : "/onboarding"}`);
+          return NextResponse.redirect(`${origin}${"/onboarding"}`);
         }
       }
       return NextResponse.redirect(`${origin}${next}`);

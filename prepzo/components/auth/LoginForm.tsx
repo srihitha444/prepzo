@@ -29,31 +29,17 @@ function LoginFormContent({
   const [mode, setMode] = useState<"login" | "forgot">("login");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
-  // Prefer the actual page origin over the static env var: this app now
-  // serves multiple hosts (prepzo.study, ca.prepzo.study, and their
-  // localhost equivalents), and the OAuth/email redirect must land back on
-  // whichever origin initiated the flow, or the PKCE verifier stored in
-  // that origin's browser storage won't be found on callback.
+  // Prefer the actual page origin over the static env var: the OAuth/email
+  // redirect must land back on whichever origin initiated the flow (prod,
+  // preview or localhost), or the PKCE verifier stored in that origin's
+  // browser storage won't be found on callback.
   const appUrl =
     (typeof window !== "undefined" ? window.location.origin : null) ||
     process.env.NEXT_PUBLIC_APP_URL ||
     "http://localhost:3000";
-  const isCaVertical = (() => {
-    if (typeof window === "undefined") return false;
-    const hostname = window.location.hostname.toLowerCase();
-    const preview = new URLSearchParams(window.location.search).get("preview")?.toLowerCase();
-    return (
-      preview === "ca" ||
-      hostname === "ca.prepzo.study" ||
-      hostname === "www.ca.prepzo.study" ||
-      hostname.endsWith(".ca.prepzo.study") ||
-      hostname === "ca.localhost" ||
-      hostname === "www.ca.localhost"
-    );
-  })();
-  const callbackPath = isCaVertical ? "/ca/auth/callback" : "/auth/callback";
-  const signupPath = isCaVertical ? "/ca/auth/signup" : "/auth/signup";
-  const resetPasswordPath = isCaVertical ? "/ca/auth/reset-password" : "/auth/reset-password";
+  const callbackPath = "/auth/callback";
+  const signupPath = "/auth/signup";
+  const resetPasswordPath = "/auth/reset-password";
 
   useEffect(() => {
     if (authError === "auth_callback_failed") {
@@ -89,7 +75,7 @@ function LoginFormContent({
       .single();
     const profile = profileRaw as { exam: string | null } | null;
     if (!profile?.exam) {
-      router.push(isCaVertical ? "/ca/onboarding" : "/onboarding");
+      router.push("/onboarding");
     } else {
       router.push(redirectTo || "/dashboard");
     }

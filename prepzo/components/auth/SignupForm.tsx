@@ -25,30 +25,16 @@ function SignupFormContent({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  // Prefer the actual page origin over the static env var: this app now
-  // serves multiple hosts (prepzo.study, ca.prepzo.study, and their
-  // localhost equivalents), and the OAuth/email redirect must land back on
-  // whichever origin initiated the flow, or the PKCE verifier stored in
-  // that origin's browser storage won't be found on callback.
+  // Prefer the actual page origin over the static env var: the OAuth/email
+  // redirect must land back on whichever origin initiated the flow (prod,
+  // preview or localhost), or the PKCE verifier stored in that origin's
+  // browser storage won't be found on callback.
   const appUrl =
     (typeof window !== "undefined" ? window.location.origin : null) ||
     process.env.NEXT_PUBLIC_APP_URL ||
     "http://localhost:3000";
-  const isCaVertical = (() => {
-    if (typeof window === "undefined") return false;
-    const hostname = window.location.hostname.toLowerCase();
-    const preview = new URLSearchParams(window.location.search).get("preview")?.toLowerCase();
-    return (
-      preview === "ca" ||
-      hostname === "ca.prepzo.study" ||
-      hostname === "www.ca.prepzo.study" ||
-      hostname.endsWith(".ca.prepzo.study") ||
-      hostname === "ca.localhost" ||
-      hostname === "www.ca.localhost"
-    );
-  })();
-  const callbackPath = isCaVertical ? "/ca/auth/callback" : "/auth/callback";
-  const loginPath = isCaVertical ? "/ca/auth/login" : "/auth/login";
+  const callbackPath = "/auth/callback";
+  const loginPath = "/auth/login";
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +64,7 @@ function SignupFormContent({
         .from("profiles")
         .upsert({ id: data.user?.id, name }, { onConflict: "id" });
       toast.success("Account created. Finish your setup.");
-      router.push(isCaVertical ? "/ca/onboarding" : "/onboarding");
+      router.push("/onboarding");
       router.refresh();
       return;
     }

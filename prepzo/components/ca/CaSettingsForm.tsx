@@ -72,7 +72,7 @@ export function CaSettingsForm({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      router.push("/ca/auth/login");
+      router.push("/auth/login");
       return;
     }
 

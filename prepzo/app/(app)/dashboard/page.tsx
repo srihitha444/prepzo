@@ -18,7 +18,7 @@ const QUICK_ACTIONS = [
 export default async function CaDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/ca/auth/login");
+  if (!user) redirect("/auth/login");
 
   const { data: profileRaw } = await supabase
     .from("profiles")
@@ -26,7 +26,7 @@ export default async function CaDashboardPage() {
     .eq("id", user.id)
     .single();
   const profile = profileRaw as Profile | null;
-  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/ca/onboarding");
+  if (profile?.exam !== "CA" || !profile.ca_level) redirect("/onboarding");
 
   const targetDate = profile.ca_target_attempt_date
     ? new Date(profile.ca_target_attempt_date).toLocaleDateString("en-IN", {
