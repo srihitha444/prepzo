@@ -4,7 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 // Paths reachable without a session. Everything under /auth/ is public too
 // (handled below) — a logged-out visitor has to be able to reach login,
 // signup, password reset and the OAuth/email callbacks.
-const PUBLIC_PATHS = ["/", "/terms", "/privacy-policy"];
+// robots.txt and sitemap.xml are in here because the matcher below runs on
+// them: without an entry a crawler hitting either gets bounced to /auth/login
+// and never sees the file at all.
+const PUBLIC_PATHS = [
+  "/",
+  "/terms",
+  "/privacy-policy",
+  "/robots.txt",
+  "/sitemap.xml",
+];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
