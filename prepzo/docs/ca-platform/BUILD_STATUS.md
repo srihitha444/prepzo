@@ -8,9 +8,30 @@ Read this before picking up CA vertical work in a new session. It captures what'
 
 ## 1. What this is
 
-Prepzo is a live NEET exam-prep platform. This session added a full second vertical — CA (Chartered Accountancy) exam prep — reusing the same Next.js app, same Supabase project, same `profiles`/`questions`/`flashcards`/`quiz_sessions` tables (discriminated by an `exam` column), rather than building CA as a separate product. `docs/ca-platform/*.md` (01–10) is the original design spec, written as if CA were a greenfield product with its own schema/GCS/Vertex AI. It doesn't match reality — every phase below reconciles the spec's intent onto the app's actual architecture, with the deviation explicitly called out.
+Prepzo is a CA (Chartered Accountancy) exam-prep platform. **As of 2026-09-13 it is CA-only** — see §1a. It began as a second vertical bolted onto a live NEET platform, reusing the same Next.js app, same Supabase project, and the same `profiles`/`questions`/`flashcards`/`quiz_sessions` tables (discriminated by an `exam` column) rather than being built as a separate product. That shared-table decision outlived NEET and still shapes the schema, so most of the history below is still load-bearing. `docs/ca-platform/*.md` (01–10) is the original design spec, written as if CA were a greenfield product with its own schema/GCS/Vertex AI. It doesn't match reality — every phase below reconciles the spec's intent onto the app's actual architecture, with the deviation explicitly called out.
 
-**Routing:** `proxy.ts` rewrites requests to `/ca/*` transparently based on hostname (`ca.prepzo.study`) or a `?preview=ca` cookie. This is why CA nav links use unprefixed paths (`/practice`, `/notes`, etc.) — mirroring the existing `CaSidebar`/`CaBottomNav` convention — while `redirect()` calls in CA pages use explicit `/ca/...` paths (e.g. `/ca/auth/login`, `/ca/onboarding`), since those are real filesystem routes and need to resolve correctly regardless of host state.
+**Routing:** CA is the app root. Every route lives at its natural path (`/dashboard`, `/practice`, `/auth/login`) and `proxy.ts` does nothing but refresh the Supabase session and bounce logged-out visitors to `/auth/login`. It used to rewrite CA-host requests to `/ca/*`, which is why older entries below name `/ca/...` paths — those were filesystem paths a CA visitor never saw in the URL bar, and the promotion in §1a moved each one to the URL it already served.
+
+
+---
+
+## 1a. The CA-only conversion (2026-09-13)
+
+NEET was deleted and CA promoted to the app root, in three commits on the `ca-only` branch. The state before any of it is tagged **`neet-v1`** — a runnable NEET app is `git checkout neet-v1` away, so nothing here needed a folder copy.
+
+**No user-facing URL changed.** CA was served at `ca.prepzo.study` with `proxy.ts` rewriting every path to `/ca/<path>`, so `/dashboard` was already `/dashboard` to a CA visitor. Promotion moved the filesystem to match the URLs, so the Supabase redirect allowlist, the email templates and already-sent password-reset links all kept working untouched.
+
+- **What was deleted:** 72 files — every route, component, hook, lib and asset reachable only from NEET. The list came from a transitive import closure over the CA entrypoints, not from filenames, which is why NEET-side code CA actually depends on survived: `lib/questions.ts`, `components/flashcard/FlashCard.tsx`, `components/auth/*`, `components/profile/Ca*`, `hooks/useFlashcards.ts`, `components/ui/{Card,Badge}`, and the `/auth/callback` + `/auth/confirm` routes. `/privacy-policy` and `/terms` stayed too (CA's landing page, help section and auth forms all link them) along with `components/content/TextDocumentPage.tsx` and their markdown. Three files were already dead in *both* verticals: `components/layout/CaHeader.tsx`, `components/ui/Button.tsx`, `hooks/useAuth.ts`.
+- **What moved:** `app/ca/(app)/*` → `app/(app)/*`, `app/ca/auth/{login,signup,reset-password}` → `app/auth/*`, `app/ca/{page,not-found,onboarding}` → root. `app/ca/auth/{callback,confirm}/route.ts` were **deleted, not moved** — both were one-line re-exports of the root handlers that only existed so the CA-host rewrite could reach them (see the §6 entry on `/auth/confirm` 404ing, now moot).
+- **What collapsed:** `resolveVertical`, `CA_HOSTS`, the `?preview=ca` cookie, the `/ca`-prefix normalisation and the rewrite are gone from `proxy.ts` (124 lines → 58). The `isCaVertical`/`isCaHost` host sniffing in the auth forms and callback/confirm routes is gone as well — every branch had collapsed to the same path. `window.location.origin` is still preferred over `NEXT_PUBLIC_APP_URL`: the PKCE verifier is stored per origin, which was never about verticals.
+- **Also dropped:** the `razorpay`, `dotenv`, `ts-node` and `tsconfig-paths` dependencies and the `seed` npm script, all orphaned. `app/robots.ts`/`app/sitemap.ts` rewritten for CA.
+- **One bug found and fixed in passing:** `/robots.txt` and `/sitemap.xml` matched `proxy.ts`'s matcher but were absent from `PUBLIC_PATHS`, so every crawler got a 307 to `/auth/login` and the files were never served. Pre-existing — the old public list didn't name them either. Found by curling the routes after the promotion rather than trusting the build output.
+
+**The database was deliberately not touched.** `profiles`/`questions`/`flashcards`/`quiz_sessions` are shared tables with CA rows tagged `exam = 'CA'`; dropping the NEET tables would break CA. NEET's rows are simply left in place, and the `exam <> 'CA'` branch in the owner-scoping RLS policy (§4) stays correct whether or not NEET code exists.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (one pre-existing unused-import warning in `NotesPanel.tsx`), production build clean at 34 routes with no `/ca` prefix, and a curl pass over every route against `npm start` — public pages 200, every app route 307 to `/auth/login` with the redirect preserved, landing page serving `<title>Prepzo CA`.
+
+**Still on the `ca-only` branch, not merged or pushed.** Merging to `main` is what would deploy this; `robots.ts`/`sitemap.ts`/`metadataBase` currently point at `ca.prepzo.study`, which needs revisiting if the root domain becomes canonical. GTM/GA container ids are still NEET's (`GTM-5L3NFL4Q`, `G-YBPPDL6TQD`).
 
 ---
 
@@ -162,7 +183,7 @@ If any of 4–7 changes in a future session, `ca-all-pending-migrations.sql` mus
 **Not yet folded into `ca-all-pending-migrations.sql`** — security-relevant, exists as a standalone file:
 - `supabase/ca-scope-questions-flashcards-by-owner.sql` — replaces the blanket `questions`/`flashcards` read policy with an owner-scoped one for CA rows (see §4). Only touches policies, no new tables/columns — safe and cheap to run against a live database.
 
-**Status: every migration file listed in this section has been run against the live database** (confirmed by the user, 2026-09-05) — including `ca-session-schema-updates.sql` and the owner-scoping policy file above. Anything added *after* this line is what a future session actually needs to ask about.
+**Status: every migration file listed in this section has been run against the live database** — the bulk confirmed by the user 2026-09-05, and `ca-generation-cache.sql` plus `ca-scope-questions-flashcards-by-owner.sql` confirmed 2026-09-13. So the caching code is live, not inert. Anything added *after* this line is what a future session actually needs to ask about.
 
 All migration files are idempotent (`if not exists` / `drop policy if exists` + recreate / `alter column drop not null`) — safe to re-run.
 
@@ -277,16 +298,13 @@ app/auth/confirm/route.ts              GET — token_hash + verifyOtp() email-li
                                         on a different browser/device than the one that requested them, which PKCE's
                                         code_verifier requirement can't tolerate (Phase 11). Requires the Supabase
                                         Dashboard's "Reset Password" email template to actually point here — see §7.
-app/ca/auth/confirm/route.ts           One-line re-export of the above, same shape as app/ca/auth/callback/route.ts.
-                                        Needed because proxy.ts rewrites CA-host paths to /ca/<path> — without this
-                                        file /auth/confirm 404s on the CA host (Phase 11).
 
-app/api/account/delete/route.ts        POST — shared NEET+CA (no exam branching). Deletes storage files under the
+app/api/account/delete/route.ts        POST — no exam branching (was shared NEET+CA). Deletes storage files under the
                                         user's ID in ca-notes/ca-test-papers, then auth.admin.deleteUser() — cascades
                                         through every table via profiles(id) references auth.users(id) on delete
                                         cascade, and every user-owned table references profiles(id) on delete cascade.
 
-app/ca/(app)/                          dashboard, notes, practice, flashcards, mock-test, tutor, cheatsheet, history,
+app/(app)/                             dashboard, notes, practice, flashcards, mock-test, tutor, cheatsheet, history,
                                         settings pages
   layout.tsx                           Auth + CA-onboarding gate for the whole route group
 
@@ -316,7 +334,7 @@ components/ca/
                                         Attempt history is per-section, not per-note (flashcard_sessions.topic).
                                         NOTE: there is deliberately no separate "Recall & Review" nav item/page for CA
                                         — an earlier pass added app/ca/(app)/decks/page.tsx + a CaSidebar/CaBottomNav
-                                        link pointing at the shared cross-subject DecksPanel (see below), which was the
+                                        link pointing at NEET's shared cross-subject DecksPanel (deleted with NEET), which was the
                                         wrong shape for what was asked (review/recall belongs inline per-section,
                                         alongside Retake) and was removed.
   MockTestRunner.tsx                   Two sections: "Practice Set" (existing paper picker -> mixed AI-generated
@@ -361,16 +379,11 @@ components/ca/
                                         (supabase.auth.updateUser), real Delete Account (POST /api/account/delete)
   CaHelpSection.tsx                    "Help & Support" tab — Privacy Policy/Terms/Contact Support links
 
-components/auth/                       Shared NEET+CA — LoginForm.tsx/SignupForm.tsx both derive isCaVertical from
-                                        window.location (hostname/?preview=ca) to pick the right callback/onboarding
-                                        path; both now have a show/hide password toggle. New ResetPasswordForm.tsx
+components/auth/                       LoginForm.tsx/SignupForm.tsx — originally NEET's, kept at the CA-only
+                                        conversion. The isCaVertical host sniffing that picked a callback/onboarding
+                                        path is gone (§1a); both have a show/hide password toggle. ResetPasswordForm.tsx
                                         (Phase 11) — reached via /auth/confirm after a token_hash verification,
                                         collects + sets a new password (supabase.auth.updateUser).
-
-components/decks/DecksPanel.tsx        NEET-only. Recall/Review spaced-repetition browser (MCQ + flashcard, merged,
-                                        exam-aware) at app/(app)/decks/page.tsx. Extracted from that page into a shared
-                                        component this session, but nothing CA-side links to it — CA's equivalent is
-                                        the per-section Review & Recall inside CaFlashcardsPanel above, not a page.
 
 supabase/*.sql                         See §5 for exact list and order
 ```
