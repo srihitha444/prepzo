@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect } from "react";
 import {
   ChevronRight,
+  ClipboardCheck,
   FileText,
+  MessageCircle,
+  NotebookPen,
+  PenLine,
   Repeat2,
   Sparkles,
-  Target,
-  Timer,
 } from "lucide-react";
 
 export default function CaLandingPage() {
@@ -76,7 +78,7 @@ export default function CaLandingPage() {
               </div>
             </div>
 
-            {/* RIGHT: Coming soon card */}
+            {/* RIGHT: Product card */}
             <div className="flex-shrink-0 w-full md:w-[420px]">
               <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-[0_8px_40px_rgba(30,58,138,0.12)] p-8 flex flex-col items-center text-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#DBEAFE] text-[#1E3A8A]">
@@ -84,8 +86,8 @@ export default function CaLandingPage() {
                 </div>
                 <h3 className="font-semibold text-[#0F172A]">Notes-to-MCQ generation</h3>
                 <p className="text-sm text-[#64748B]">
-                  Coming soon: upload a PDF or photo of your notes and get exam-style MCQs and
-                  flashcards back in minutes.
+                  Upload a PDF or photo of your notes and get exam-style MCQs and flashcards
+                  back in minutes.
                 </p>
               </div>
             </div>
@@ -231,7 +233,9 @@ const HOW_IT_WORKS = [
 
 const FEATURES = [
   { title: "Notes to MCQs", description: "Turn your own study notes into exam-style multiple choice questions automatically", icon: Sparkles },
+  { title: "Descriptive answers, graded", description: "Write a full answer and get it marked against the question's mark allocation, point by point", icon: PenLine },
+  { title: "Real papers, transcribed", description: "Upload a past or mock ICAI paper and practice its actual questions, not a generated approximation", icon: ClipboardCheck },
+  { title: "AI Teacher on your notes", description: "Ask questions and get answers grounded in the material you uploaded, not generic explanations", icon: MessageCircle },
   { title: "Spaced Repetition System", description: "Every card you practice — right or wrong — comes back at the perfect time so you never forget before the exam", icon: Repeat2 },
-  { title: "Timed Practice", description: "Train under real exam pressure with a live countdown timer", icon: Timer },
-  { title: "Weak Topic Detection", description: "Automatically spots your weak topics and shows you exactly what to focus on next", icon: Target },
+  { title: "Cheatsheets you can edit", description: "Condense any upload into a revision sheet you can edit and export as a PDF", icon: NotebookPen },
 ];
