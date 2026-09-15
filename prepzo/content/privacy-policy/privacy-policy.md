@@ -1,6 +1,6 @@
 ## PRIVACY POLICY
 
-Effective date: 2026-06-03
+Effective date: 2026-09-16
 
 1. Introduction
 
@@ -53,6 +53,16 @@ While using our Service, we may ask you to provide us with certain personally id
 0.5. Cookies and Usage Data
 
 We may use your Personal Data to contact you with newsletters, marketing or promotional materials and other information that may be of interest to you. You may opt out of receiving any, or all, of these communications from us by following the unsubscribe link.
+
+Study Material You Upload
+
+Service lets you upload your own study material — notes, documents, images and past or mock examination papers ("Your Uploads"). We store Your Uploads, and the content we derive from them, in order to provide Service to you.
+
+To generate questions, flashcards, cheatsheets, tutor responses and answer evaluations, the contents of Your Uploads are sent to a third-party artificial intelligence provider, Google, for processing through its Gemini API. Your answers to practice questions are sent in the same way when you ask for them to be evaluated. Google processes this content in order to return a result to us. Do not upload material you would not want processed in this way, and avoid including personal or confidential information that is not needed for your studies.
+
+Material generated from Your Uploads is scoped to your own account. Other users of Service cannot see Your Uploads or the questions, flashcards or cheatsheets derived from them.
+
+You can delete Your Uploads at any time from within Service, which also removes the stored file and retires the content generated from it. Deleting your account removes Your Uploads and their derived content.
 
 Usage Data
 
@@ -268,9 +278,9 @@ We may use remarketing services to advertise on third party websites to you afte
 
 17. Payments
 
-We may provide paid products and/or services within Service. In that case, we use third-party services for payment processing (e.g. payment processors).
+Service is currently provided free of charge. We do not operate paid plans or subscriptions, we do not process payments, and we do not collect or store payment card details.
 
-We will not store or collect your payment card details. That information is provided directly to our third-party payment processors whose use of your personal information is governed by their Privacy Policy. These payment processors adhere to the standards set by PCI-DSS as managed by the PCI Security Standards Council, which is a joint effort of brands like Visa, Mastercard, American Express and Discover. PCI-DSS requirements help ensure the secure handling of payment information.
+If we introduce paid features in future, we will update this Privacy Policy to describe the payment processor used before any charge is made.
 
 18. Links to Other Sites
 
