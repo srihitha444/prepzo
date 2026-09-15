@@ -31,7 +31,9 @@ NEET was deleted and CA promoted to the app root, in three commits on the `ca-on
 
 **Verified:** `tsc --noEmit` clean, `eslint` clean (one pre-existing unused-import warning in `NotesPanel.tsx`), production build clean at 34 routes with no `/ca` prefix, and a curl pass over every route against `npm start` — public pages 200, every app route 307 to `/auth/login` with the redirect preserved, landing page serving `<title>Prepzo CA`.
 
-**Still on the `ca-only` branch, not merged or pushed.** Merging to `main` is what would deploy this; `robots.ts`/`sitemap.ts`/`metadataBase` currently point at `ca.prepzo.study`, which needs revisiting if the root domain becomes canonical. GTM/GA container ids are still NEET's (`GTM-5L3NFL4Q`, `G-YBPPDL6TQD`).
+**Canonical domain is `www.prepzo.study`** (decided 2026-09-16) — `metadataBase`, `robots.ts`, `sitemap.ts` and the cheatsheet PDF's logo link all point there. The product is CA-only now, so it takes the established apex rather than living on the `ca.` subdomain; `ca.prepzo.study` should redirect to it. This works without DNS changes because the merged `proxy.ts` ignores hostname entirely — every domain on the Vercel project serves the same CA app, which is also why no domain should be deleted.
+
+**Still on the `ca-only` branch.** Merging to `main` is what deploys it. GTM/GA container ids are still NEET's (`GTM-5L3NFL4Q`, `G-YBPPDL6TQD`).
 
 ---
 

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = "https://ca.prepzo.study";
+const baseUrl = "https://www.prepzo.study";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date("2026-09-13T00:00:00+05:30");

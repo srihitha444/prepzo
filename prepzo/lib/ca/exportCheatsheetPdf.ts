@@ -6,7 +6,7 @@ import jsPDF from "jspdf";
 const PAGE_MARGIN = 48;
 const LINE_HEIGHT = 16;
 const INDENT_STEP = 14;
-const PREPZO_URL = "https://prepzo.study";
+const PREPZO_URL = "https://www.prepzo.study";
 const LOGO_SRC = "/prepzo-icon.png";
 
 async function loadImageAsDataUrl(src: string): Promise<string> {

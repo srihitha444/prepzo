@@ -25,7 +25,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ca.prepzo.study"),
+  metadataBase: new URL("https://www.prepzo.study"),
   title: {
     default: "Prepzo CA - Chartered Accountancy Preparation",
     template: "%s | Prepzo CA",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     "Upload your CA study notes and Prepzo turns them into MCQs and flashcards, tailored to your level and group.",
   keywords: ["CA preparation", "CA Foundation", "CA Intermediate", "CA Final", "ICAI exam prep"],
   applicationName: "Prepzo CA",
-  authors: [{ name: "Prepzo", url: "https://ca.prepzo.study" }],
+  authors: [{ name: "Prepzo", url: "https://www.prepzo.study" }],
   creator: "Prepzo",
   publisher: "Prepzo",
   alternates: {

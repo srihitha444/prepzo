@@ -20,7 +20,7 @@ export default function robots(): MetadataRoute.Robots {
         "/tutor",
       ],
     },
-    sitemap: "https://ca.prepzo.study/sitemap.xml",
-    host: "https://ca.prepzo.study",
+    sitemap: "https://www.prepzo.study/sitemap.xml",
+    host: "https://www.prepzo.study",
   };
 }
