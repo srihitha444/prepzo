@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { processTestPaper } from "@/lib/ca/processTestPaper";
+import { consumeQuota, releaseQuota, resolvePlan } from "@/lib/ca/usage";
 
 // The file itself is uploaded directly from the browser to Supabase
 // Storage (see lib/ca/clientUpload.ts) — Vercel Serverless Functions have
@@ -51,6 +52,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Same reasoning as notes/upload: a real-paper upload is a Gemini
+    // vision call, so charge before doing it and release if we fail below.
+    const serviceClient = await createServiceClient();
+    const plan = await resolvePlan(serviceClient, user.id);
+    const quota = await consumeQuota(serviceClient, user.id, plan.id, "past_paper_tests");
+    if (!quota.ok) {
+      return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
+    }
+
     const { data: paperRow, error: insertError } = await supabase
       .from("ca_test_papers")
       .insert({
@@ -65,12 +75,12 @@ export async function POST(request: Request) {
 
     if (insertError || !paperRow) {
       console.error("CA ca_test_papers insert failed:", insertError);
+      await releaseQuota(serviceClient, user.id, "past_paper_tests", quota.periodStart);
       return NextResponse.json({ error: "Failed to save upload record" }, { status: 500 });
     }
 
     // processing_queue is service-managed by design (users only get a
     // SELECT policy) — same reasoning as the notes upload route.
-    const serviceClient = await createServiceClient();
     const { error: queueError } = await serviceClient.from("processing_queue").insert({
       test_paper_id: paperRow.id,
       user_id: user.id,
@@ -78,6 +88,7 @@ export async function POST(request: Request) {
     });
     if (queueError) {
       console.error("CA test paper processing_queue insert failed:", queueError);
+      await releaseQuota(serviceClient, user.id, "past_paper_tests", quota.periodStart);
       return NextResponse.json({ error: "Failed to queue processing" }, { status: 500 });
     }
 

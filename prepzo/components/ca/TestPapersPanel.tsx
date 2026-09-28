@@ -50,6 +50,8 @@ function useAttemptHistory(userId: string, testPaperIds: string[]) {
       .from("ca_mock_test_attempts")
       .select("id, test_paper_id, total_score, total_possible, completed_at")
       .eq("user_id", userId)
+      // Skip abandoned attempts — rows created at start that never finished.
+      .not("completed_at", "is", null)
       .in("test_paper_id", testPaperIds)
       .order("completed_at", { ascending: false });
 

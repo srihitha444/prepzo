@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
+import { releaseQuota } from "@/lib/ca/usage";
 
 const NOTES_BUCKET = "ca-notes";
 
@@ -44,6 +45,11 @@ export async function POST(request: Request) {
     await service.storage.from(NOTES_BUCKET).remove([note.file_path]);
     await service.from("processing_queue").delete().eq("note_id", note_id);
     await service.from("user_notes").delete().eq("id", note_id);
+
+    // Give the upload allowance back. Cancelling is what a student does when
+    // processing has stalled — charging them for a note that produced nothing
+    // would spend a Free plan's entire monthly allowance on a failure.
+    await releaseQuota(service, user.id, "uploads");
 
     return NextResponse.json({ success: true });
   } catch (error) {

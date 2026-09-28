@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { processNote } from "@/lib/ca/processNote";
+import { consumeQuota, releaseQuota, resolvePlan } from "@/lib/ca/usage";
 
 // The file itself is uploaded directly from the browser to Supabase
 // Storage (see lib/ca/clientUpload.ts) — Vercel Serverless Functions have
@@ -59,6 +60,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Charge the upload allowance BEFORE any work — an upload is a Gemini
+    // vision call, so an unmetered one is an unbilled cost. Consumed here
+    // rather than after processing because processing is what we're paying
+    // for; a failure below releases it again.
+    const serviceClient = await createServiceClient();
+    const plan = await resolvePlan(serviceClient, user.id);
+    const quota = await consumeQuota(serviceClient, user.id, plan.id, "uploads");
+    if (!quota.ok) {
+      return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
+    }
+
     const { data: noteRow, error: insertError } = await supabase
       .from("user_notes")
       .insert({
@@ -75,6 +87,7 @@ export async function POST(request: Request) {
 
     if (insertError || !noteRow) {
       console.error("CA user_notes insert failed:", insertError);
+      await releaseQuota(serviceClient, user.id, "uploads", quota.periodStart);
       return NextResponse.json({ error: "Failed to save upload record" }, { status: 500 });
     }
 
@@ -82,7 +95,6 @@ export async function POST(request: Request) {
     // SELECT policy, to check status — see ca-notes-pipeline-schema.sql) —
     // the initial row has to be inserted with the service client, not the
     // user-scoped one used above for user_notes.
-    const serviceClient = await createServiceClient();
     const { error: queueError } = await serviceClient.from("processing_queue").insert({
       note_id: noteRow.id,
       user_id: user.id,
@@ -90,6 +102,7 @@ export async function POST(request: Request) {
     });
     if (queueError) {
       console.error("CA processing_queue insert failed:", queueError);
+      await releaseQuota(serviceClient, user.id, "uploads", quota.periodStart);
       return NextResponse.json({ error: "Failed to queue processing" }, { status: 500 });
     }
 

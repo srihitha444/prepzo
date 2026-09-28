@@ -11,15 +11,16 @@ import { appendToPool, getPools, poolItemTexts, type PooledItem } from "@/lib/ca
 import { isRetryableGeminiError } from "@/lib/gemini";
 import type { CaLevel } from "@/lib/ca-syllabus";
 import type { ContentBlock, ContentMap } from "@/lib/ca/extraction";
+import { resolvePlan } from "@/lib/ca/usage";
 
 export const maxDuration = 60;
 
-// Guard rails on the student-chosen total. The floor keeps a stray 0 from
-// silently producing nothing; the ceiling is about the single Gemini call
-// this route makes — asking for hundreds of items in one request would
-// blow the response budget rather than fail cleanly.
+// The floor keeps a stray 0 from silently producing nothing. The ceiling is
+// the student's plan allowance (questionsPerUpload / flashcardsPerUpload in
+// lib/ca/plans.ts), which also serves the practical purpose the old flat cap
+// did: one Gemini call can only return so much before the response budget
+// becomes the problem.
 const MIN_TOTAL = 1;
-const MAX_TOTAL = 60;
 
 export async function POST(request: Request) {
   try {
@@ -75,10 +76,15 @@ export async function POST(request: Request) {
 
     // The student also picks how many. Default keeps pre-selection callers
     // working: roughly what the old fixed per-block rules produced.
+    // Clamped rather than rejected: the picker already shows the plan's
+    // ceiling, so a larger number means a stale client, not an attack — and
+    // silently giving them the most they're entitled to beats an error.
+    const plan = await resolvePlan(service, user.id);
+    const perUploadCap = mode === "questions" ? plan.questionsPerUpload : plan.flashcardsPerUpload;
     const requestedTotal =
       typeof body.count === "number" && Number.isFinite(body.count)
-        ? Math.min(MAX_TOTAL, Math.max(MIN_TOTAL, Math.floor(body.count)))
-        : blocks.length * DEFAULT_ITEMS_PER_BLOCK;
+        ? Math.min(perUploadCap, Math.max(MIN_TOTAL, Math.floor(body.count)))
+        : Math.min(perUploadCap, blocks.length * DEFAULT_ITEMS_PER_BLOCK);
 
     const table = mode === "questions" ? "questions" : "flashcards";
 
@@ -204,6 +210,7 @@ export async function POST(request: Request) {
       count,
       from_cache: rehydrated.length,
       newly_generated: count - rehydrated.length,
+      per_upload_cap: perUploadCap,
     });
   } catch (error) {
     console.error("CA notes generate error:", error);

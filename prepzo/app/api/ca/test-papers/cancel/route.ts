@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
+import { releaseQuota } from "@/lib/ca/usage";
 
 const TEST_PAPERS_BUCKET = "ca-test-papers";
 
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
     await service.storage.from(TEST_PAPERS_BUCKET).remove([paper.file_path]);
     await service.from("processing_queue").delete().eq("test_paper_id", test_paper_id);
     await service.from("ca_test_papers").delete().eq("id", test_paper_id);
+
+    // Same reasoning as notes/cancel: a cancelled paper produced nothing.
+    await releaseQuota(service, user.id, "past_paper_tests");
+
 
     return NextResponse.json({ success: true });
   } catch (error) {

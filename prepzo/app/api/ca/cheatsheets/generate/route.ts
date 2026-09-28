@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { generateCheatsheet } from "@/lib/ca/generateCheatsheet";
 import { isRetryableGeminiError } from "@/lib/gemini";
+import { consumeQuota, releaseQuota, resolvePlan } from "@/lib/ca/usage";
 
 export const maxDuration = 60;
 
@@ -42,13 +43,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This note hasn't finished processing yet" }, { status: 400 });
     }
 
-    const content = await generateCheatsheet({
-      supabase: service,
-      userId: user.id,
-      noteId: note_id,
-      noteTitle: note.title,
-      blockIds,
-    });
+    // Charged per generation, since each one is a Gemini call. In practice
+    // that's once per note: the UI only offers "Create Cheatsheet" when the
+    // note has none, and Regenerate was removed in Phase 7.
+    const plan = await resolvePlan(service, user.id);
+    const quota = await consumeQuota(service, user.id, plan.id, "cheatsheets");
+    if (!quota.ok) {
+      return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
+    }
+
+    let content: string;
+    try {
+      content = await generateCheatsheet({
+        supabase: service,
+        userId: user.id,
+        noteId: note_id,
+        noteTitle: note.title,
+        blockIds,
+      });
+    } catch (generationError) {
+      // Nothing was produced, so the allowance shouldn't be spent.
+      await releaseQuota(service, user.id, "cheatsheets", quota.periodStart);
+      throw generationError;
+    }
 
     // Upsert on (user_id, note_id) — this same call also powers "Regenerate",
     // deliberately overwriting whatever content (including edits) was there.

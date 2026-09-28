@@ -64,6 +64,10 @@ export default async function CaHistoryPage() {
       .from("ca_mock_test_attempts")
       .select("id, paper, total_score, total_possible, completed_at")
       .eq("user_id", user.id)
+      // An attempt row is created when a test STARTS (see
+      // app/api/ca/mock-tests/start), so an abandoned test leaves a row with
+      // no completed_at. Those aren't results and shouldn't be listed.
+      .not("completed_at", "is", null)
       .order("completed_at", { ascending: false }),
     supabase.from("user_notes").select("id, title").eq("user_id", user.id),
   ]);

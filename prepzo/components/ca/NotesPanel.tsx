@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileText, ChevronDown, ChevronUp, PenSquare, Layers, MessageCircle, Loader2, RefreshCw, NotebookPen } from "lucide-react";
+import { FileText, ChevronDown, ChevronUp, PenSquare, Layers, MessageCircle, RefreshCw, NotebookPen } from "lucide-react";
 import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";

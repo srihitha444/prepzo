@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchQuestions, recordAnswer } from "@/lib/questions";
 import type { CaPaper } from "@/lib/ca-syllabus";
@@ -47,9 +47,42 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<MockTestResult | null>(null);
+  const [quotaError, setQuotaError] = useState<string | null>(null);
+  // One claim per mounted test, so React's development double-mount (and any
+  // dependency change that re-runs load) can't charge the same attempt twice.
+  const claimedRef = useRef(false);
+  // The attempt row /start created for us. /finish updates that exact row —
+  // the browser can no longer create one itself.
+  const attemptIdRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+
+    // Claim the mock-test allowance before loading anything. The attempt row
+    // is still written client-side on finish, so this route is the only place
+    // the quota can actually be enforced — see app/api/ca/mock-tests/start.
+    if (!claimedRef.current) {
+      claimedRef.current = true;
+      try {
+        const res = await fetch("/api/ca/mock-tests/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paper: paper.code, test_paper_id: testPaperId || null }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setQuotaError(json.error || "You've used all your mock tests for this month.");
+          setQuestions([]);
+          setLoading(false);
+          return;
+        }
+        attemptIdRef.current = json.attempt_id ?? null;
+      } catch {
+        // A network blip shouldn't block a student who is entitled to the
+        // test; the cap is a product limit, not a security boundary.
+        console.error("[mock-test] could not claim allowance, continuing");
+      }
+    }
 
     if (testPaperId) {
       // A real uploaded paper is a fixed, already-assembled set — pull
@@ -80,7 +113,7 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
     setSubmitted(false);
     setResult(null);
     setLoading(false);
-  }, [paper.name, paper.format, testPaperId]);
+  }, [paper.name, paper.format, paper.code, testPaperId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount via a memoized async helper; setState happens after an await
@@ -156,18 +189,24 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
       const totalPossible = gradedMcqQuestions.length + descriptivePossible;
       const totalScore = Math.round((mcqScore + descriptiveScore) * 100) / 100;
 
-      const supabase = createClient();
-      await supabase.from("ca_mock_test_attempts").insert({
-        user_id: userId,
-        paper: paper.code,
-        test_paper_id: testPaperId || null,
-        mcq_answers: Object.fromEntries(Object.entries(mcqAnswers).map(([id, a]) => [id, a.selected])),
-        descriptive_answers: Object.fromEntries(Object.entries(descriptiveAnswers).map(([id, a]) => [id, a.text])),
-        mcq_score: Math.round(mcqScore * 100) / 100,
-        descriptive_score: descriptiveScore,
-        total_score: totalScore,
-        total_possible: totalPossible,
-      });
+      // Written through the server, not straight to the table: attempts are
+      // service-write only now, which is what makes the mock-test allowance
+      // enforceable rather than advisory.
+      if (attemptIdRef.current) {
+        await fetch("/api/ca/mock-tests/finish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attempt_id: attemptIdRef.current,
+            mcq_answers: Object.fromEntries(Object.entries(mcqAnswers).map(([id, a]) => [id, a.selected])),
+            descriptive_answers: Object.fromEntries(Object.entries(descriptiveAnswers).map(([id, a]) => [id, a.text])),
+            mcq_score: Math.round(mcqScore * 100) / 100,
+            descriptive_score: descriptiveScore,
+            total_score: totalScore,
+            total_possible: totalPossible,
+          }),
+        });
+      }
 
       setResult({ mcqScore: Math.round(mcqScore * 100) / 100, descriptiveScore, totalScore, totalPossible });
       setSubmitted(true);
@@ -179,6 +218,7 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
   const answeredCount = Object.keys(mcqAnswers).length + Object.values(descriptiveAnswers).filter((a) => a.evaluation).length;
 
   return {
+    quotaError,
     questions,
     currentIndex,
     currentQuestion: questions[currentIndex] || null,

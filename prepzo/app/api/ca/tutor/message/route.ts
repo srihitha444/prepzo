@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { consumeQuota, resolvePlan } from "@/lib/ca/usage";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { getChatModel, generateWithRetry, isRetryableGeminiError } from "@/lib/gemini";
 import { fetchNoteContext } from "@/lib/ca/tutorContext";
@@ -79,6 +80,18 @@ export async function POST(request: Request) {
     const rateLimitError = checkRateLimit((recentSession?.messages || []) as ChatMessage[]);
     if (rateLimitError) {
       return NextResponse.json({ error: rateLimitError }, { status: 429 });
+    }
+
+    // Distinct from the rate limit above: that's abuse protection (1 per 5s,
+    // 10 per 60s) and applies to everyone. This is the plan's daily message
+    // allowance. Charged before the Gemini call; not released on failure,
+    // because a failed answer still consumed a turn of the conversation and
+    // releasing would let a student retry a failing prompt indefinitely.
+    const service = await createServiceClient();
+    const plan = await resolvePlan(service, user.id);
+    const quota = await consumeQuota(service, user.id, plan.id, "tutor_messages");
+    if (!quota.ok) {
+      return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
     }
 
     let sessionRow: { id: string; ca_level: string | null; current_topic: string | null; messages: ChatMessage[]; messages_count: number };

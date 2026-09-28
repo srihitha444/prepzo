@@ -9,6 +9,7 @@ import { DescriptiveAnswerForm, EvaluationResult } from "@/components/ca/Practic
 import { TestPapersPanel } from "@/components/ca/TestPapersPanel";
 import { QuestionText } from "@/components/ca/QuestionText";
 import { ResizableSplit } from "@/components/ca/ResizableSplit";
+import Link from "next/link";
 
 const OPTION_KEYS = ["A", "B", "C", "D"] as const;
 
@@ -30,6 +31,22 @@ function TestRunner({
       <p className="mt-6 text-sm text-[#64748B]">
         {testPaperId ? "Loading questions from this paper..." : "Assembling questions from your notes..."}
       </p>
+    );
+  }
+
+  // Out of allowance is a different message from "nothing to show", and it
+  // needs a way forward rather than an explanation.
+  if (test.quotaError) {
+    return (
+      <div className="mt-6 rounded-2xl border border-[#E2E8F0] bg-white p-6 text-center shadow-[var(--shadow-card)]">
+        <p className="text-sm text-[#0F172A]">{test.quotaError}</p>
+        <Link
+          href="/pricing"
+          className="mt-4 inline-flex rounded-xl bg-[#1E3A8A] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
+        >
+          See plans
+        </Link>
+      </div>
     );
   }
 
