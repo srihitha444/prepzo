@@ -1,210 +1,573 @@
 ## TERMS AND CONDITIONS
 
-Last updated: 2026-09-16
+Last updated: 2026-09-24
+
+IMPORTANT: Sections 4 to 8 set out how paid subscriptions work, including that
+paid plans RENEW AUTOMATICALLY until you cancel them, how to cancel, and when
+refunds are and are not available. Please read them before subscribing.
+
 1. Introduction
 
-Welcome to Prepzo (“Company”, “we”, “our”, “us”)!
+Welcome to Prepzo ("Company", "we", "our", "us").
 
-These Terms of Service (“Terms”, “Terms of Service”) govern your use of our website located at https://www.prepzo.study/ (together or individually “Service”) operated by Prepzo.
+These Terms of Service ("Terms") govern your use of our website located at
+https://www.prepzo.study/ (together or individually "Service") operated by
+Prepzo, a sole proprietorship of S. Srihitha registered under the Udyam
+Registration scheme, having its registered office at Manasarovar Heights Road,
+RTC Colony, Tirumalagiri, Secunderabad, Hyderabad, Telangana 500015, India.
 
-Our Privacy Policy also governs your use of our Service and explains how we collect, safeguard and disclose information that results from your use of our web pages.
+Our Privacy Policy also governs your use of Service and explains how we
+collect, safeguard and disclose information that results from your use of our
+web pages.
 
-Your agreement with us includes these Terms and our Privacy Policy (“Agreements”). You acknowledge that you have read and understood Agreements, and agree to be bound of them.
+Your agreement with us includes these Terms and our Privacy Policy
+("Agreements"). You acknowledge that you have read and understood the
+Agreements and agree to be bound by them.
 
-If you do not agree with (or cannot comply with) Agreements, then you may not use the Service, but please let us know by emailing at support@prepzo.study so we can try to find a solution. These Terms apply to all visitors, users and others who wish to access or use Service.
+If you do not agree with (or cannot comply with) the Agreements, you may not
+use Service, but please let us know by emailing support@prepzo.study so we can
+try to find a solution. These Terms apply to all visitors, users and others who
+access or use Service.
 
-2. Communications
+2. Service Is Offered in India Only
 
-By using our Service, you agree to subscribe to newsletters, marketing or promotional materials and other information we may send. However, you may opt out of receiving any, or all, of these communications from us by following the unsubscribe link or by emailing at support@prepzo.study.
+Service is intended for, and offered only to, individuals resident in India. It
+is not directed at, and we do not knowingly provide Service to, individuals
+located outside India. All prices are quoted in Indian Rupees and payments are
+collected in India.
 
-3. Fees and Payments
+If you access Service from outside India, you do so on your own initiative and
+at your own risk, and you are responsible for compliance with any local law
+that applies to you. We may decline or withdraw Service where we reasonably
+believe you are not resident in India.
 
-Service is currently provided free of charge. We do not operate paid plans, subscriptions or free trials, we do not process payments, and we do not collect or store card or other payment details.
+3. Communications
 
-If we introduce paid features in future, we will update these Terms and the Privacy Policy before doing so, and no charge will be made without your express consent at that time.
+When you create an account we will send you messages necessary to operate
+Service, such as confirmations, password resets, receipts and notices about
+your subscription. These are not marketing messages and you cannot opt out of
+them while you hold an account.
 
-4. Contests, Sweepstakes and Promotions
+We will only send you newsletters, marketing or promotional material if you
+have chosen to receive it. You may withdraw that consent at any time using the
+unsubscribe link in any such message or by emailing support@prepzo.study.
 
-Any contests, sweepstakes or other promotions (collectively, “Promotions”) made available through Service may be governed by rules that are separate from these Terms of Service. If you participate in any Promotions, please review the applicable rules as well as our Privacy Policy. If the rules for a Promotion conflict with these Terms of Service, Promotion rules will apply.
+4. Plans, Fees and Taxes
 
-5. Content
+Service is offered on a free plan and on paid subscription plans. The plans,
+their current prices and the limits that apply to each are shown on our pricing
+page at https://www.prepzo.study/pricing, which forms part of these Terms.
 
-Content found on or through this Service are the property of Prepzo or used with permission. You may not distribute, modify, transmit, reuse, download, repost, copy, or use said Content, whether in whole or in part, for commercial purposes or for personal gain, without express advance written permission from us.
+As at the date above, the paid plans are:
 
-6. Your Uploads
+  Mid      Rs. 129 per month, or Rs. 1,199 per year
+  Premium  Rs. 299 per month, or Rs. 2,799 per year
 
-Service allows you to upload your own study material, including notes, documents, images and past or mock examination papers ("Your Uploads").
+All prices are in Indian Rupees and are inclusive of applicable taxes. Where a
+tax invoice is required, it will be issued to the account holder's registered
+email address.
 
-You retain ownership of Your Uploads. You grant us a limited, non-exclusive licence to store, process and analyse Your Uploads solely in order to provide Service to you, including generating questions, flashcards, cheatsheets and answer evaluations from them. We do not use Your Uploads to build a shared question bank, and other users cannot access material generated from Your Uploads.
+We may change our prices. A change will not affect the price of a subscription
+period you have already paid for. If we change the price applying to your
+renewal, we will notify you by email at least fourteen (14) days before the
+renewal date, so that you can cancel before the new price takes effect.
 
-You are responsible for Your Uploads. You represent that you have the right to upload the material in question and that doing so does not infringe the copyright or other rights of any third party. Study material published by institutes, coaching centres, publishers and examination bodies is generally protected by copyright, and you should upload it only where you are permitted to do so.
+5. Automatic Renewal
 
-You may delete Your Uploads at any time from within Service. Deleting an upload also retires the content generated from it.
+PAID PLANS RENEW AUTOMATICALLY.
 
-7. AI-Generated Content
+When you subscribe to a paid plan, you authorise us and our payment processor
+to charge your selected payment method on a recurring basis:
 
-Questions, options, explanations, model answers, flashcards, cheatsheets, tutor responses and answer evaluations produced by Service are generated by automated systems, including third-party artificial intelligence models. See our Privacy Policy for details of how Your Uploads are processed.
+  5.1. A monthly plan renews every month, on the same date, until cancelled.
 
-Automatically generated content can be incomplete, outdated or wrong. It is provided as a study aid only. It is not professional, legal, accounting, taxation or financial advice, and it is not an authoritative statement of any accounting standard, statute, rule or examination syllabus. You should always verify it against official study material and current pronouncements before relying on it.
+  5.2. An annual plan renews every year, on the same date, until cancelled.
 
-Marks, scores and feedback produced by Service are indicative only. They are not an assessment by any examination body, they do not reflect how an examiner would mark the same answer, and they are not a prediction of your result in any examination.
+Each renewal is charged at the price then applying to your plan and billing
+cycle, as notified under section 4. Renewal continues until you cancel under
+section 6, or until we cancel or suspend the subscription under these Terms.
 
-8. No Affiliation With ICAI
+Your bank or card issuer may require you to approve the recurring mandate when
+you first subscribe, and may notify you before each debit. We do not control
+those notifications.
 
-Prepzo is an independent study platform. We are not affiliated with, endorsed by, sponsored by or otherwise connected to the Institute of Chartered Accountants of India (ICAI) or any other examination body. References to examinations, levels, papers and syllabus content are descriptive only and are used to help you organise your own study material.
+If a renewal payment fails, our payment processor may reattempt it. If it
+ultimately cannot be collected, your subscription will stop renewing and your
+account will return to the free plan at the end of the period you have already
+paid for. Content and history generated during a paid period are not deleted
+when your account returns to the free plan, but free plan limits will apply
+from then on.
 
-9. Prohibited Uses
+6. Cancellation
 
-You may use Service only for lawful purposes and in accordance with Terms. You agree not to use Service:
+You may cancel a paid plan at any time from the pricing page in your account,
+or by emailing support@prepzo.study.
 
-0.1. In any way that violates any applicable national or international law or regulation.
+Cancellation stops future renewals. It does not end your current subscription
+period: you keep access to your paid plan until the end of the period you have
+already paid for, and your account returns to the free plan after that. We do
+not provide pro-rata refunds for the unused part of a period that has already
+begun, except as set out in section 7.
 
-0.2. For the purpose of exploiting, harming, or attempting to exploit or harm minors in any way by exposing them to inappropriate content or otherwise.
+7. Refunds
+
+  7.1. If you are charged in error, charged twice for the same period, or
+  charged after you have cancelled, contact us at support@prepzo.study and we
+  will refund the incorrect charge in full.
+
+  7.2. If Service is materially unavailable for a prolonged period during a
+  subscription period you have paid for, contact us and we will provide a
+  refund or an extension of your subscription, at your election.
+
+  7.3. Other than as set out above, subscription fees are non-refundable once a
+  subscription period has begun. This includes situations where you did not use
+  Service during the period, or you are dissatisfied with automatically
+  generated content, which is provided subject to section 10.
+
+  7.4. Approved refunds are made to the original payment method. The time taken
+  for the refund to appear is determined by your bank or card issuer.
+
+  7.5. Nothing in this section limits any right you have under the Consumer
+  Protection Act, 2019 or other applicable law.
+
+8. Plan Limits and Fair Use
+
+Each plan includes a stated allowance for uploads, questions and flashcards
+generated per upload, AI Teacher messages, cheatsheets, past paper tests and
+mock tests. Allowances that reset monthly do so on the first day of each
+calendar month; allowances that reset daily do so each day. Unused allowance
+does not carry over.
+
+Where a plan describes an allowance as "unlimited", it remains subject to a
+fair-use ceiling intended to prevent automated or abusive use. That ceiling is
+set well above ordinary individual study use, and we will tell you if you reach
+it. We may contact you to discuss your usage before applying any restriction.
+
+  8.1. One account, one person. Your account is personal to you. A
+  subscription covers a single named individual and may not be shared. You may
+  not disclose your password or share your account credentials with anyone, let
+  any other person use your account, operate an account on behalf of a group,
+  batch or study circle, or resell, sublicense, rent or otherwise provide
+  access to Service to any other person.
+
+  8.2. We may treat concurrent use from multiple devices or locations, or usage
+  patterns inconsistent with a single individual studying, as evidence that an
+  account is being shared. Where we reasonably believe an account is shared, we
+  may require verification, restrict access, or suspend or terminate the
+  account under section 22. Where a paid account is terminated for sharing, no
+  refund is due for the remainder of the period.
+
+  8.3. Nothing in this section prevents you from using your own account on more
+  than one of your own devices.
+
+9. Your Uploads
+
+Service allows you to upload your own study material, including notes,
+documents, images and past or mock examination papers ("Your Uploads").
+
+You retain ownership of Your Uploads. You grant us a limited, non-exclusive,
+royalty-free licence to store, process and analyse Your Uploads in order to
+provide Service, including to generate questions, flashcards, cheatsheets and
+answer evaluations from them.
+
+  9.1. Reuse of generated material between accounts. To avoid repeating the
+  same processing, Service stores the material it generates from an uploaded
+  file together with an identifier derived from that file's contents. If
+  another user later uploads a file that is identical to one already processed,
+  Service may serve them the material generated earlier instead of generating
+  it again.
+
+  This means that questions, flashcards and other material generated from a
+  file you upload may be provided to other users who upload the same file. It
+  applies only to identical files, and only to material generated by Service.
+  It does not give any other user access to your account, your uploaded file
+  itself, your answers, your scores, or your study history, all of which remain
+  private to you.
+
+  9.2. We retain such generated material for as long as at least one user still
+  has the corresponding file on their account. When no user does, it is
+  deleted. If you delete your account, generated material derived from files
+  that no other user holds is deleted with it.
+
+  9.3. Your warranty about what you upload. You are responsible for Your
+  Uploads. By uploading a file you represent and warrant, each time you upload,
+  that:
+
+    (a) you lawfully possess the material and have obtained it through
+    legitimate means;
+
+    (b) you own the material or hold all rights, licences, consents and
+    permissions necessary to upload it and to have it processed as described in
+    these Terms and our Privacy Policy; and
+
+    (c) uploading it, and our processing of it, does not and will not infringe
+    the copyright, moral rights, database rights, confidentiality or any other
+    right of any third party, and does not breach any licence, subscription
+    condition or terms of use under which you obtained it.
+
+  9.4. Third-party study material. Study material published by examination
+  bodies, institutes, coaching centres and publishers, including the Institute
+  of Chartered Accountants of India (ICAI) and its study material, practice
+  manuals, revision test papers, mock test papers and past examination papers,
+  is protected by copyright owned by those bodies. Material supplied by a
+  coaching centre is frequently licensed to you personally and on condition
+  that it is not reproduced, shared or uploaded elsewhere. Upload such material
+  only where you are genuinely permitted to do so. If you are unsure whether
+  you are permitted, do not upload it.
+
+  9.5. Indemnity. You agree to indemnify and hold us harmless against any
+  claim, demand, proceeding, loss, liability, damages, cost or expense
+  (including reasonable legal fees) brought by a third party and arising out of
+  or in connection with a breach of the warranties in sections 9.3 or 9.4, or
+  any allegation that Your Uploads infringe the rights of that third party.
 
-0.3. To transmit, or procure the sending of, any advertising or promotional material, including any “junk mail”, “chain letter,” “spam,” or any other similar solicitation.
+  9.6. Our response to complaints. We may remove or disable access to any
+  upload, and to material generated from it, where we receive a complaint under
+  section 18, where we are required to do so by law, or where we reasonably
+  believe it was uploaded in breach of this section. Repeated breaches may
+  result in termination of your account under section 22.
+
+  9.7. You may delete Your Uploads at any time from within Service. Deleting an
+  upload also retires the content generated from it in your account.
+
+10. AI-Generated Content
 
-0.4. To impersonate or attempt to impersonate Company, a Company employee, another user, or any other person or entity.
+Questions, options, explanations, model answers, flashcards, cheatsheets, tutor
+responses and answer evaluations produced by Service are generated by automated
+systems, including third-party artificial intelligence models. See our Privacy
+Policy for details of how Your Uploads are processed.
 
-0.5. In any way that infringes upon the rights of others, or in any way is illegal, threatening, fraudulent, or harmful, or in connection with any unlawful, illegal, fraudulent, or harmful purpose or activity.
+Automatically generated content can be incomplete, outdated or wrong. It is
+provided as a study aid only. It is not professional, legal, accounting,
+taxation or financial advice, and it is not an authoritative statement of any
+accounting standard, statute, rule or examination syllabus. You should always
+verify it against official study material and current pronouncements before
+relying on it. This is particularly important for monetary thresholds, rates,
+due dates and section references, which change from year to year.
 
-0.6. To engage in any other conduct that restricts or inhibits anyone’s use or enjoyment of Service, or which, as determined by us, may harm or offend Company or users of Service or expose them to liability.
+Marks, scores and feedback produced by Service are indicative only. They are
+not an assessment by any examination body, they do not reflect how an examiner
+would mark the same answer, and they are not a prediction of your result in any
+examination.
 
-Additionally, you agree not to:
+Paid plans provide a larger allowance of automatically generated content. They
+do not provide any warranty as to its accuracy, and section 7.3 applies.
 
-0.1. Use Service in any manner that could disable, overburden, damage, or impair Service or interfere with any other party’s use of Service, including their ability to engage in real time activities through Service.
+11. No Affiliation With ICAI
 
-0.2. Use any robot, spider, or other automatic device, process, or means to access Service for any purpose, including monitoring or copying any of the material on Service.
+Prepzo is an independent study platform. We are not affiliated with, endorsed
+by, sponsored by or otherwise connected to the Institute of Chartered
+Accountants of India (ICAI) or any other examination body. References to
+examinations, levels, papers and syllabus content are descriptive only and are
+used to help you organise your own study material.
 
-0.3. Use any manual process to monitor or copy any of the material on Service or for any other unauthorized purpose without our prior written consent.
+12. Prohibited Uses
 
-0.4. Use any device, software, or routine that interferes with the proper working of Service.
+You may use Service only for lawful purposes and in accordance with these
+Terms. You agree not to use Service:
 
-0.5. Introduce any viruses, trojan horses, worms, logic bombs, or other material which is malicious or technologically harmful.
+  12.1. In any way that violates any applicable national or international law
+  or regulation.
 
-0.6. Attempt to gain unauthorized access to, interfere with, damage, or disrupt any parts of Service, the server on which Service is stored, or any server, computer, or database connected to Service.
+  12.2. For the purpose of exploiting, harming, or attempting to exploit or
+  harm minors in any way.
 
-0.7. Attack Service via a denial-of-service attack or a distributed denial-of-service attack.
+  12.3. To transmit, or procure the sending of, any advertising or promotional
+  material, including "junk mail", "chain letters", "spam" or any similar
+  solicitation.
 
-0.8. Take any action that may damage or falsify Company rating.
+  12.4. To impersonate or attempt to impersonate the Company, a Company
+  employee, another user, or any other person or entity.
 
-0.9. Otherwise attempt to interfere with the proper working of Service.
+  12.5. In any way that infringes upon the rights of others, or that is
+  illegal, threatening, fraudulent or harmful, or in connection with any
+  unlawful, fraudulent or harmful purpose or activity.
 
-10. Analytics
+  12.6. To engage in any conduct that restricts or inhibits anyone's use or
+  enjoyment of Service, or which may harm or offend the Company or users of
+  Service or expose them to liability.
 
-We may use third-party Service Providers to monitor and analyze the use of our Service.
+You also agree not to:
 
-11. No Use By Minors
+  12.7. Use Service in any manner that could disable, overburden, damage or
+  impair Service or interfere with any other party's use of Service.
 
-Service is intended only for access and use by individuals at least eighteen (18) years old. By accessing or using Service, you warrant and represent that you are at least eighteen (18) years of age and with the full authority, right, and capacity to enter into this agreement and abide by all of the terms and conditions of Terms. If you are not at least eighteen (18) years old, you are prohibited from both the access and usage of Service.
+  12.8. Use any robot, spider or other automatic device, process or means to
+  access Service for any purpose, including monitoring or copying any material
+  on Service.
 
-12. Accounts
+  12.9. Use any manual process to monitor or copy material on Service for any
+  unauthorised purpose without our prior written consent.
 
-When you create an account with us, you guarantee that you are above the age of 18, and that the information you provide us is accurate, complete, and current at all times. Inaccurate, incomplete, or obsolete information may result in the immediate termination of your account on Service.
+  12.10. Use any device, software or routine that interferes with the proper
+  working of Service.
 
-You are responsible for maintaining the confidentiality of your account and password, including but not limited to the restriction of access to your computer and/or account. You agree to accept responsibility for any and all activities or actions that occur under your account and/or password, whether your password is with our Service or a third-party service. You must notify us immediately upon becoming aware of any breach of security or unauthorized use of your account.
+  12.11. Introduce any virus, trojan horse, worm, logic bomb or other material
+  which is malicious or technologically harmful.
 
-You may not use as a username the name of another person or entity or that is not lawfully available for use, a name or trademark that is subject to any rights of another person or entity other than you, without appropriate authorization. You may not use as a username any name that is offensive, vulgar or obscene.
+  12.12. Attempt to gain unauthorised access to, interfere with, damage or
+  disrupt any part of Service, the server on which Service is stored, or any
+  server, computer or database connected to Service.
 
-We reserve the right to refuse service, terminate accounts, remove or edit content, or cancel orders in our sole discretion.
+  12.13. Circumvent, or attempt to circumvent, any plan limit, allowance,
+  metering or payment mechanism in Service.
 
-13. Intellectual Property
+  12.14. Attack Service by means of a denial-of-service or distributed
+  denial-of-service attack.
 
-Service and its original content (excluding Content provided by users), features and functionality are and will remain the exclusive property of Prepzo and its licensors. Service is protected by copyright, trademark, and other laws of  and foreign countries. Our trademarks may not be used in connection with any product or service without the prior written consent of Prepzo.
+  12.15. Otherwise attempt to interfere with the proper working of Service.
 
-14. Copyright Policy
+13. Payments and Payment Processing
 
-We respect the intellectual property rights of others. It is our policy to respond to any claim that Content posted on Service infringes on the copyright or other intellectual property rights (“Infringement”) of any person or entity.
+Payments are processed by our third-party payment processor, Razorpay. When you
+subscribe, you provide your payment details directly to that processor and are
+subject to its terms and privacy policy in addition to these Terms.
 
-If you are a copyright owner, or authorized on behalf of one, and you believe that the copyrighted work has been copied in a way that constitutes copyright infringement, please submit your claim via email to support@prepzo.study, with the subject line: “Copyright Infringement” and include in your claim a detailed description of the alleged Infringement as detailed below, under “DMCA Notice and Procedure for Copyright Infringement Claims”
+We do not collect, see or store your full card number, CVV or bank
+credentials. We receive only a record of the payment, the amount, and an
+identifier that allows us to match the payment to your account.
 
-You may be held accountable for damages (including costs and attorneys’ fees) for misrepresentation or bad-faith claims on the infringement of any Content found on and/or through Service on your copyright.
+You represent that you are authorised to use the payment method you provide,
+and that the information you give is accurate.
 
-15. DMCA Notice and Procedure for Copyright Infringement Claims
+14. Analytics
 
-You may submit a notification pursuant to the Digital Millennium Copyright Act (DMCA) by providing our Copyright Agent with the following information in writing (see 17 U.S.C 512(c)(3) for further detail):
+We may use third-party service providers to monitor and analyse the use of
+Service. See our Privacy Policy for details.
 
-0.1. an electronic or physical signature of the person authorized to act on behalf of the owner of the copyright’s interest;
+15. No Use By Minors
 
-0.2. a description of the copyrighted work that you claim has been infringed, including the URL (i.e., web page address) of the location where the copyrighted work exists or a copy of the copyrighted work;
+Service is intended only for access and use by individuals at least eighteen
+(18) years old. By accessing or using Service, you warrant and represent that
+you are at least eighteen (18) years of age and have the full authority, right
+and capacity to enter into this agreement and abide by these Terms. If you are
+not at least eighteen (18) years old, you are prohibited from accessing and
+using Service.
 
-0.3. identification of the URL or other specific location on Service where the material that you claim is infringing is located;
+16. Accounts
 
-0.4. your address, telephone number, and email address;
+When you create an account with us, you guarantee that you are above the age of
+18 and that the information you provide is accurate, complete and current at
+all times. Inaccurate, incomplete or obsolete information may result in
+termination of your account.
 
-0.5. a statement by you that you have a good faith belief that the disputed use is not authorized by the copyright owner, its agent, or the law;
+You are responsible for maintaining the confidentiality of your account and
+password, including restricting access to your computer and account. You agree
+to accept responsibility for all activities that occur under your account,
+whether or not authorised by you. You must notify us immediately on becoming
+aware of any breach of security or unauthorised use of your account.
 
-0.6. a statement by you, made under penalty of perjury, that the above information in your notice is accurate and that you are the copyright owner or authorized to act on the copyright owner’s behalf.
+You may not use as a username the name of another person or entity, a name or
+trademark subject to the rights of another person or entity without
+authorisation, or any name that is offensive, vulgar or obscene.
 
-You can contact our Copyright Agent via email at support@prepzo.study.
+We reserve the right to refuse service, terminate accounts, or remove or edit
+content in accordance with section 22.
 
-16. Error Reporting and Feedback
+17. Intellectual Property
 
-You may provide us either directly at support@prepzo.study or via third party sites and tools with information and feedback concerning errors, suggestions for improvements, ideas, problems, complaints, and other matters related to our Service (“Feedback”). You acknowledge and agree that: (i) you shall not retain, acquire or assert any intellectual property right or other right, title or interest in or to the Feedback; (ii) Company may have development ideas similar to the Feedback; (iii) Feedback does not contain confidential information or proprietary information from you or any third party; and (iv) Company is not under any obligation of confidentiality with respect to the Feedback. In the event the transfer of the ownership to the Feedback is not possible due to applicable mandatory laws, you grant Company and its affiliates an exclusive, transferable, irrevocable, free-of-charge, sub-licensable, unlimited and perpetual right to use (including copy, modify, create derivative works, publish, distribute and commercialize) Feedback in any manner and for any purpose.
+Service and its original content (excluding content provided by users),
+features and functionality are and will remain the exclusive property of the
+Company and its licensors. Service is protected by copyright, trademark and
+other laws of India and foreign countries. Our trademarks may not be used in
+connection with any product or service without our prior written consent.
 
-17. Links To Other Web Sites
+18. Copyright and Takedown
 
-Our Service may contain links to third party web sites or services that are not owned or controlled by Prepzo.
+We respect the intellectual property rights of others, and it is our policy to
+respond to claims that content on Service infringes the copyright or other
+rights of any person or entity.
 
-Prepzo has no control over, and assumes no responsibility for the content, privacy policies, or practices of any third party web sites or services. We do not warrant the offerings of any of these entities/individuals or their websites.
+If you are a copyright owner, or authorised to act on behalf of one, and you
+believe that material accessible on Service infringes your copyright, please
+email support@prepzo.study with the subject line "Copyright Infringement",
+providing:
 
-For example, the outlined Terms of Use have been created using PolicyMaker.io, a free web application for generating high-quality legal documents. PolicyMaker’s Terms and Conditions generator is an easy-to-use free tool for creating an excellent standard Terms of Service template for a website, blog, e-commerce store or app.
+  18.1. your name, address, telephone number and email address, and the
+  capacity in which you act;
 
-YOU ACKNOWLEDGE AND AGREE THAT COMPANY SHALL NOT BE RESPONSIBLE OR LIABLE, DIRECTLY OR INDIRECTLY, FOR ANY DAMAGE OR LOSS CAUSED OR ALLEGED TO BE CAUSED BY OR IN CONNECTION WITH USE OF OR RELIANCE ON ANY SUCH CONTENT, GOODS OR SERVICES AVAILABLE ON OR THROUGH ANY SUCH THIRD PARTY WEB SITES OR SERVICES.
+  18.2. identification of the work you claim has been infringed;
 
-WE STRONGLY ADVISE YOU TO READ THE TERMS OF SERVICE AND PRIVACY POLICIES OF ANY THIRD PARTY WEB SITES OR SERVICES THAT YOU VISIT.
+  18.3. identification of the material you claim is infringing, and enough
+  detail for us to locate it;
 
-18. Disclaimer Of Warranty
+  18.4. a statement that you have a good-faith belief that the use complained
+  of is not authorised by the copyright owner, its agent or the law;
 
-THESE SERVICES ARE PROVIDED BY COMPANY ON AN “AS IS” AND “AS AVAILABLE” BASIS. COMPANY MAKES NO REPRESENTATIONS OR WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, AS TO THE OPERATION OF THEIR SERVICES, OR THE INFORMATION, CONTENT OR MATERIALS INCLUDED THEREIN. YOU EXPRESSLY AGREE THAT YOUR USE OF THESE SERVICES, THEIR CONTENT, AND ANY SERVICES OR ITEMS OBTAINED FROM US IS AT YOUR SOLE RISK.
+  18.5. a statement that the information in your notice is accurate; and
 
-NEITHER COMPANY NOR ANY PERSON ASSOCIATED WITH COMPANY MAKES ANY WARRANTY OR REPRESENTATION WITH RESPECT TO THE COMPLETENESS, SECURITY, RELIABILITY, QUALITY, ACCURACY, OR AVAILABILITY OF THE SERVICES. WITHOUT LIMITING THE FOREGOING, NEITHER COMPANY NOR ANYONE ASSOCIATED WITH COMPANY REPRESENTS OR WARRANTS THAT THE SERVICES, THEIR CONTENT, OR ANY SERVICES OR ITEMS OBTAINED THROUGH THE SERVICES WILL BE ACCURATE, RELIABLE, ERROR-FREE, OR UNINTERRUPTED, THAT DEFECTS WILL BE CORRECTED, THAT THE SERVICES OR THE SERVER THAT MAKES IT AVAILABLE ARE FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS OR THAT THE SERVICES OR ANY SERVICES OR ITEMS OBTAINED THROUGH THE SERVICES WILL OTHERWISE MEET YOUR NEEDS OR EXPECTATIONS.
+  18.6. your physical or electronic signature.
 
-COMPANY HEREBY DISCLAIMS ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, NON-INFRINGEMENT, AND FITNESS FOR PARTICULAR PURPOSE.
+We will acknowledge a valid notice and act on it in accordance with the
+Information Technology Act, 2000 and the rules made under it. You may be held
+liable for damages, including costs, for a misrepresentation or a bad-faith
+claim.
 
-THE FOREGOING DOES NOT AFFECT ANY WARRANTIES WHICH CANNOT BE EXCLUDED OR LIMITED UNDER APPLICABLE LAW.
+19. Grievance Redressal
 
-19. Limitation Of Liability
+In accordance with the Information Technology Act, 2000 and the rules made
+under it, and the Consumer Protection (E-Commerce) Rules, 2020, the contact
+details of our Grievance Officer are:
 
-EXCEPT AS PROHIBITED BY LAW, YOU WILL HOLD US AND OUR OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS HARMLESS FOR ANY INDIRECT, PUNITIVE, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGE, HOWEVER IT ARISES (INCLUDING ATTORNEYS’ FEES AND ALL RELATED COSTS AND EXPENSES OF LITIGATION AND ARBITRATION, OR AT TRIAL OR ON APPEAL, IF ANY, WHETHER OR NOT LITIGATION OR ARBITRATION IS INSTITUTED), WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE, OR OTHER TORTIOUS ACTION, OR ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT, INCLUDING WITHOUT LIMITATION ANY CLAIM FOR PERSONAL INJURY OR PROPERTY DAMAGE, ARISING FROM THIS AGREEMENT AND ANY VIOLATION BY YOU OF ANY FEDERAL, STATE, OR LOCAL LAWS, STATUTES, RULES, OR REGULATIONS, EVEN IF COMPANY HAS BEEN PREVIOUSLY ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. EXCEPT AS PROHIBITED BY LAW, IF THERE IS LIABILITY FOUND ON THE PART OF COMPANY, IT WILL BE LIMITED TO THE AMOUNT PAID FOR THE PRODUCTS AND/OR SERVICES, AND UNDER NO CIRCUMSTANCES WILL THERE BE CONSEQUENTIAL OR PUNITIVE DAMAGES. SOME STATES DO NOT ALLOW THE EXCLUSION OR LIMITATION OF PUNITIVE, INCIDENTAL OR CONSEQUENTIAL DAMAGES, SO THE PRIOR LIMITATION OR EXCLUSION MAY NOT APPLY TO YOU.
+  Name:    S. Srihitha
+  Email:   sri@prepzo.study
+  Address: Manasarovar Heights Road, RTC Colony, Tirumalagiri,
+           Secunderabad, Hyderabad, Telangana 500015, India
 
-20. Termination
+We will acknowledge your complaint within twenty-four (24) hours of receipt and
+resolve it within fifteen (15) days, in accordance with the Information
+Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.
 
-We may terminate or suspend your account and bar access to Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever and without limitation, including but not limited to a breach of Terms.
+For billing or subscription issues, email support@prepzo.study first; most
+matters are resolved quickly without a formal complaint.
 
-If you wish to terminate your account, you may simply discontinue using Service.
+20. Error Reporting and Feedback
 
-All provisions of Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity and limitations of liability.
+You may provide us, either directly at support@prepzo.study or through
+third-party sites and tools, with information and feedback concerning errors,
+suggestions for improvements, ideas, problems and complaints ("Feedback"). You
+acknowledge and agree that: (i) you will not acquire or assert any intellectual
+property right in the Feedback; (ii) we may already have similar ideas; (iii)
+Feedback does not contain confidential information from you or any third party;
+and (iv) we are under no obligation of confidentiality in respect of Feedback.
+You grant us a transferable, irrevocable, royalty-free, sub-licensable and
+perpetual right to use Feedback for any purpose.
 
-21. Governing Law
+21. Links To Other Web Sites
 
-These Terms shall be governed and construed in accordance with the laws of India, which governing law applies to agreement without regard to its conflict of law provisions.
+Service may contain links to third-party web sites or services that are not
+owned or controlled by us. We have no control over, and assume no
+responsibility for, the content, privacy policies or practices of any
+third-party web site or service.
 
-Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights. If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in effect. These Terms constitute the entire agreement between us regarding our Service and supersede and replace any prior agreements we might have had between us regarding Service.
+YOU ACKNOWLEDGE AND AGREE THAT THE COMPANY SHALL NOT BE RESPONSIBLE OR LIABLE,
+DIRECTLY OR INDIRECTLY, FOR ANY DAMAGE OR LOSS CAUSED OR ALLEGED TO BE CAUSED
+BY OR IN CONNECTION WITH USE OF OR RELIANCE ON ANY CONTENT, GOODS OR SERVICES
+AVAILABLE ON OR THROUGH ANY SUCH THIRD-PARTY WEB SITE OR SERVICE.
 
-22. Changes To Service
+WE STRONGLY ADVISE YOU TO READ THE TERMS AND PRIVACY POLICIES OF ANY
+THIRD-PARTY WEB SITES OR SERVICES THAT YOU VISIT.
 
-We reserve the right to withdraw or amend our Service, and any service or material we provide via Service, in our sole discretion without notice. We will not be liable if for any reason all or any part of Service is unavailable at any time or for any period. From time to time, we may restrict access to some parts of Service, or the entire Service, to users, including registered users.
+22. Suspension and Termination
 
-23. Amendments To Terms
+We may suspend or terminate your account and access to Service where you have
+materially breached these Terms, where we are required to do so by law, or
+where continued provision of Service would expose us or our users to liability
+or harm.
 
-We may amend Terms at any time by posting the amended terms on this site. It is your responsibility to review these Terms periodically.
+Except where immediate action is necessary to prevent harm, to comply with law,
+or in the case of a serious breach, we will give you notice and an opportunity
+to remedy the breach before suspending or terminating a paid account. If we
+terminate a paid account other than for your breach, we will refund the unused
+portion of your current subscription period.
 
-Your continued use of the Platform following the posting of revised Terms means that you accept and agree to the changes. You are expected to check this page frequently so you are aware of any changes, as they are binding on you.
+You may stop using Service at any time. To cancel a paid plan, see section 6.
+To delete your account and the data associated with it, use the option in your
+account settings.
 
-By continuing to access or use our Service after any revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, you are no longer authorized to use Service.
+All provisions of these Terms which by their nature should survive termination
+shall survive, including ownership provisions, warranty disclaimers, indemnity
+and limitations of liability.
 
-24. Waiver And Severability
+23. Disclaimer Of Warranty
 
-No waiver by Company of any term or condition set forth in Terms shall be deemed a further or continuing waiver of such term or condition or a waiver of any other term or condition, and any failure of Company to assert a right or provision under Terms shall not constitute a waiver of such right or provision.
+SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS. WE MAKE NO
+REPRESENTATIONS OR WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, AS TO THE
+OPERATION OF SERVICE OR THE INFORMATION, CONTENT OR MATERIALS INCLUDED IN IT.
+YOU EXPRESSLY AGREE THAT YOUR USE OF SERVICE IS AT YOUR SOLE RISK.
 
-If any provision of Terms is held by a court or other tribunal of competent jurisdiction to be invalid, illegal or unenforceable for any reason, such provision shall be eliminated or limited to the minimum extent such that the remaining provisions of Terms will continue in full force and effect.
+NEITHER THE COMPANY NOR ANY PERSON ASSOCIATED WITH IT MAKES ANY WARRANTY OR
+REPRESENTATION WITH RESPECT TO THE COMPLETENESS, SECURITY, RELIABILITY,
+QUALITY, ACCURACY OR AVAILABILITY OF SERVICE. WITHOUT LIMITING THE FOREGOING,
+WE DO NOT REPRESENT OR WARRANT THAT SERVICE OR ITS CONTENT WILL BE ACCURATE,
+RELIABLE, ERROR-FREE OR UNINTERRUPTED, THAT DEFECTS WILL BE CORRECTED, OR THAT
+SERVICE IS FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS.
 
-25. Acknowledgement
+WE DISCLAIM ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY OR
+OTHERWISE, INCLUDING ANY WARRANTIES OF MERCHANTABILITY, NON-INFRINGEMENT AND
+FITNESS FOR A PARTICULAR PURPOSE.
 
-BY USING SERVICE OR OTHER SERVICES PROVIDED BY US, YOU ACKNOWLEDGE THAT YOU HAVE READ THESE TERMS OF SERVICE AND AGREE TO BE BOUND BY THEM.
+THE FOREGOING DOES NOT AFFECT ANY WARRANTY OR RIGHT WHICH CANNOT BE EXCLUDED OR
+LIMITED UNDER APPLICABLE LAW, INCLUDING UNDER THE CONSUMER PROTECTION ACT,
+2019.
 
-26. Contact Us
+24. Limitation Of Liability
 
-Please send your feedback, comments, requests for technical support by email: support@prepzo.study.
+EXCEPT AS PROHIBITED BY LAW, WE AND OUR OFFICERS, DIRECTORS, EMPLOYEES AND
+AGENTS WILL NOT BE LIABLE FOR ANY INDIRECT, PUNITIVE, SPECIAL, INCIDENTAL OR
+CONSEQUENTIAL DAMAGE, HOWEVER ARISING, WHETHER IN CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THESE TERMS, EVEN IF WE
+HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-These Terms of Service were created for https://www.prepzo.study/ by PolicyMaker.io on 2026-06-03.
+WITHOUT LIMITING THE FOREGOING, WE ARE NOT LIABLE FOR ANY EXAMINATION RESULT,
+LOSS OF STUDY TIME, OR DECISION TAKEN IN RELIANCE ON AUTOMATICALLY GENERATED
+CONTENT, WHICH IS PROVIDED SUBJECT TO SECTION 10.
+
+EXCEPT AS PROHIBITED BY LAW, IF LIABILITY IS FOUND ON OUR PART, IT WILL BE
+LIMITED TO THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE
+EVENT GIVING RISE TO THE CLAIM.
+
+NOTHING IN THESE TERMS EXCLUDES OR LIMITS LIABILITY WHICH CANNOT LAWFULLY BE
+EXCLUDED OR LIMITED, INCLUDING LIABILITY FOR FRAUD.
+
+25. Governing Law and Jurisdiction
+
+These Terms are governed by and construed in accordance with the laws of India,
+without regard to conflict of law provisions. The courts at Hyderabad, India
+shall have exclusive jurisdiction over any dispute arising out of or in
+connection with these Terms, subject to any right you have to bring proceedings
+before a consumer forum having jurisdiction where you reside.
+
+Our failure to enforce any right or provision of these Terms will not be
+considered a waiver of those rights.
+
+26. Changes To Service
+
+We reserve the right to withdraw or amend Service, and any service or material
+we provide through it, without notice. We will not be liable if for any reason
+all or part of Service is unavailable at any time. Where a change materially
+reduces the features or allowances of a paid plan you are currently subscribed
+to, we will notify you by email, and you may cancel and receive a pro-rata
+refund of the unused portion of your current period.
+
+27. Amendments To Terms
+
+We may amend these Terms at any time by posting the amended terms on this page,
+and will update the "Last updated" date above.
+
+Where a change materially affects your rights or obligations, including any
+change to fees, renewal or cancellation, we will notify you by email at least
+fourteen (14) days before it takes effect, so that you can cancel before then
+if you do not agree.
+
+Your continued use of Service after revised Terms take effect means that you
+accept them. If you do not agree to the revised Terms, you must stop using
+Service and may cancel under section 6.
+
+28. Waiver And Severability
+
+No waiver by the Company of any term or condition set out in these Terms shall
+be deemed a further or continuing waiver of that term or condition, or a waiver
+of any other term or condition.
+
+If any provision of these Terms is held by a court or other tribunal of
+competent jurisdiction to be invalid, illegal or unenforceable, that provision
+shall be eliminated or limited to the minimum extent necessary so that the
+remaining provisions continue in full force and effect.
+
+29. Entire Agreement
+
+These Terms, together with our Privacy Policy and the pricing page, constitute
+the entire agreement between you and us regarding Service and supersede any
+prior agreements between us regarding Service.
+
+30. Acknowledgement
+
+BY USING SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ THESE TERMS AND AGREE TO
+BE BOUND BY THEM.
+
+31. Contact Us
+
+For support, feedback or billing questions, email support@prepzo.study.
+
+For formal complaints, see the Grievance Redressal details in section 19.
