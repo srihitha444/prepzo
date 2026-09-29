@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getContentModel, generateWithRetry, PATIENT_RETRY_DELAYS_MS } from "@/lib/gemini";
+import { generateForTask, PATIENT_RETRY_DELAYS_MS } from "@/lib/gemini";
 import { normalizeDifficulty, type RawQuestion } from "@/lib/ca/generateContent";
 import { CA_SYLLABUS, getPaperByCode } from "@/lib/ca-syllabus";
 
@@ -153,15 +153,13 @@ Rules:
 
 Return strict JSON only, matching this shape:
 ${RESULT_SHAPE}`;
-
-  const model = getContentModel();
-  const result = await generateWithRetry(
-    model,
+  const result = await generateForTask(
+    "extraction",
     [
       { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
       { text: prompt },
     ],
-    PATIENT_RETRY_DELAYS_MS
+    { json: true, retryDelaysMs: PATIENT_RETRY_DELAYS_MS }
   );
 
   const text = result.response.text();

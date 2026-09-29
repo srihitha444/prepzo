@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { consumeQuota, resolvePlan } from "@/lib/ca/usage";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
-import { getChatModel, generateWithRetry, isRetryableGeminiError } from "@/lib/gemini";
+import { generateForTask, isRetryableGeminiError } from "@/lib/gemini";
 import { fetchNoteContext } from "@/lib/ca/tutorContext";
 
 export const maxDuration = 60;
@@ -176,9 +176,7 @@ export async function POST(request: Request) {
       .join("\n");
 
     const prompt = `${systemPrompt}${noteContextBlock}\n\n${history ? `Conversation so far:\n${history}\n\n` : ""}Student: ${message.trim()}\n\nRespond as Prepzo Tutor:`;
-
-    const model = getChatModel();
-    const result = await generateWithRetry(model, prompt);
+    const result = await generateForTask("tutor", prompt);
     const replyText = result.response.text().trim();
 
     if (!replyText || filterOutput(replyText)) {

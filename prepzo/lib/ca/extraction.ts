@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "crypto";
-import { getContentModel, generateWithRetry, PATIENT_RETRY_DELAYS_MS } from "@/lib/gemini";
+import { generateForTask, PATIENT_RETRY_DELAYS_MS } from "@/lib/gemini";
 import { getPaperByCode, getPapersForLevel, type CaLevel, type CaPaper } from "@/lib/ca-syllabus";
 import type { ContentType } from "@/lib/ca/templates";
 
@@ -93,15 +93,13 @@ export async function extractAndMapContent(params: {
 ${EXTRACTION_RULES_HEAD}
 ${paperList}
 ${EXTRACTION_RULES_TAIL}`;
-
-  const model = getContentModel();
-  const result = await generateWithRetry(
-    model,
+  const result = await generateForTask(
+    "extraction",
     [
       { inlineData: { data: fileBuffer.toString("base64"), mimeType } },
       { text: prompt },
     ],
-    PATIENT_RETRY_DELAYS_MS
+    { json: true, retryDelaysMs: PATIENT_RETRY_DELAYS_MS }
   );
   return parseExtractionResponse(result.response.text());
 }

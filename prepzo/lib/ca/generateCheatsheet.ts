@@ -1,4 +1,4 @@
-import { getChatModel, generateWithRetry } from "@/lib/gemini";
+import { generateForTask } from "@/lib/gemini";
 import { fetchNoteContext } from "@/lib/ca/tutorContext";
 
 /**
@@ -53,9 +53,7 @@ Rules:
 - Do not invent section numbers, standard numbers, or facts not present in the source content.
 
 Return ONLY the markdown cheatsheet content — no preamble, no "Here is your cheatsheet" framing, no code fences around it.`;
-
-  const model = getChatModel();
-  const result = await generateWithRetry(model, prompt);
+  const result = await generateForTask("cheatsheet", prompt);
   const content = result.response.text().trim();
 
   if (!content) {

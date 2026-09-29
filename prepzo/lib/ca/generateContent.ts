@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getContentModel, generateWithRetry } from "@/lib/gemini";
+import { generateForTask } from "@/lib/gemini";
 import { getPaperByCode, type CaLevel } from "@/lib/ca-syllabus";
 import { buildFlashcardRules, buildQuestionRules, getFormatClass } from "@/lib/ca/templates";
 import type { ContentBlock } from "@/lib/ca/extraction";
@@ -280,9 +280,7 @@ ${mode === "questions" ? `- When a block's instructions say to generate a shared
 
 Return strict JSON only, matching this shape:
 ${RESULT_SHAPE_BY_MODE[mode]}`;
-
-  const model = getContentModel();
-  const result = await generateWithRetry(model, prompt);
+  const result = await generateForTask("generation", prompt, { json: true });
   const text = result.response.text();
 
   let parsed: { results?: RawBlockResult[] };

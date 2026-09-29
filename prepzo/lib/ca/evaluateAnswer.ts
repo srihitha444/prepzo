@@ -1,4 +1,4 @@
-import { getContentModel, generateWithRetry } from "@/lib/gemini";
+import { generateForTask } from "@/lib/gemini";
 import type { Question } from "@/lib/supabase/types";
 
 export interface AnswerEvaluation {
@@ -79,8 +79,7 @@ function clampPercentage(marksAwarded: number, marksTotal: number, given?: numbe
 }
 
 export async function evaluateDescriptiveAnswer(question: Question, studentAnswer: string): Promise<AnswerEvaluation> {
-  const model = getContentModel();
-  const result = await generateWithRetry(model, buildPrompt(question, studentAnswer));
+  const result = await generateForTask("evaluation", buildPrompt(question, studentAnswer), { json: true });
   const text = result.response.text();
 
   let parsed: RawEvaluation;
