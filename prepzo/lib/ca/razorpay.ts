@@ -49,6 +49,15 @@ export async function ensureRazorpayPlan(
   supabase: any,
   params: { plan: "pro" | "premium"; cycle: "monthly" | "yearly"; amountPaise: number; name: string }
 ): Promise<string> {
+  // A plan id configured by hand in the Razorpay dashboard wins over anything
+  // this code would create. Held in the environment rather than seeded into
+  // ca_razorpay_plans because plan ids are environment-specific — a test-mode
+  // plan does not exist in live mode — while the Supabase project is shared
+  // between both. Seeding test ids into that table would quietly break live
+  // checkout.
+  const configured = process.env[`RAZORPAY_PLAN_${params.plan.toUpperCase()}_${params.cycle.toUpperCase()}`];
+  if (configured) return configured;
+
   const { data: cached } = await supabase
     .from("ca_razorpay_plans")
     .select("razorpay_plan_id")
