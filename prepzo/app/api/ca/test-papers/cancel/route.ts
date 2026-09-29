@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     await service.from("ca_test_papers").delete().eq("id", test_paper_id);
 
     // Same reasoning as notes/cancel: a cancelled paper produced nothing.
-    await releaseQuota(service, user.id, "past_paper_tests");
+    await releaseQuota(service, user.id, "uploads");
 
 
     return NextResponse.json({ success: true });

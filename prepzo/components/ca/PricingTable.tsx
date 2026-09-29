@@ -190,7 +190,7 @@ export function PricingTable({
               </div>
 
               <ul className="mt-5 flex-1 space-y-2.5 text-sm text-[#0F172A]">
-                <Feature>{quotaLabel(plan.quotas.uploads)} uploads a month</Feature>
+                <Feature>{quotaLabel(plan.quotas.uploads)} document uploads a month</Feature>
                 <Feature>{plan.questionsPerUpload} questions per upload</Feature>
                 <Feature>{plan.flashcardsPerUpload} flashcards per upload</Feature>
                 <Feature>{quotaLabel(plan.quotas.tutor_messages)} AI Teacher messages a day</Feature>
@@ -198,7 +198,7 @@ export function PricingTable({
                   {quotaLabel(plan.quotas.cheatsheets)} cheatsheets a month
                   {plan.cheatsheetPdfDownload ? ", with PDF download" : ""}
                 </Feature>
-                <Feature>{quotaLabel(plan.quotas.past_paper_tests)} past paper tests a month</Feature>
+                <Feature>{quotaLabel(plan.quotas.mock_tests)} mock tests a month</Feature>
                 <Feature>
                   {plan.historyAccess ? "Full study history and score trends" : "No study history"}
                 </Feature>

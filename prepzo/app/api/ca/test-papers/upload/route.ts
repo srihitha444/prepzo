@@ -52,11 +52,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Same reasoning as notes/upload: a real-paper upload is a Gemini
-    // vision call, so charge before doing it and release if we fail below.
+    // Charged against the SHARED `uploads` allowance, not a separate one: a
+    // paper upload is the same Gemini vision call as a note upload, so the
+    // student has one document budget covering both pages.
     const serviceClient = await createServiceClient();
     const plan = await resolvePlan(serviceClient, user.id);
-    const quota = await consumeQuota(serviceClient, user.id, plan.id, "past_paper_tests");
+    const quota = await consumeQuota(serviceClient, user.id, plan.id, "uploads");
     if (!quota.ok) {
       return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
     }
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
 
     if (insertError || !paperRow) {
       console.error("CA ca_test_papers insert failed:", insertError);
-      await releaseQuota(serviceClient, user.id, "past_paper_tests", quota.periodStart);
+      await releaseQuota(serviceClient, user.id, "uploads", quota.periodStart);
       return NextResponse.json({ error: "Failed to save upload record" }, { status: 500 });
     }
 
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     });
     if (queueError) {
       console.error("CA test paper processing_queue insert failed:", queueError);
-      await releaseQuota(serviceClient, user.id, "past_paper_tests", quota.periodStart);
+      await releaseQuota(serviceClient, user.id, "uploads", quota.periodStart);
       return NextResponse.json({ error: "Failed to queue processing" }, { status: 500 });
     }
 

@@ -132,11 +132,16 @@ begun, except as set out in section 7.
 
 8. Plan Limits and Fair Use
 
-Each plan includes a stated allowance for uploads, questions and flashcards
-generated per upload, AI Teacher messages, cheatsheets, past paper tests and
-mock tests. Allowances that reset monthly do so on the first day of each
-calendar month; allowances that reset daily do so each day. Unused allowance
-does not carry over.
+Each plan includes a stated allowance for document uploads, questions and
+flashcards generated per document, AI Teacher messages, cheatsheets and mock
+tests. Allowances that reset monthly do so on the first day of each calendar
+month; allowances that reset daily do so each day. Unused allowance does not
+carry over.
+
+The document upload allowance is shared: it covers every file you upload,
+whether study notes or a real examination paper. A mock test means attempting
+a real examination paper you have uploaded. Practice sessions built from your
+own notes are not counted against the mock test allowance.
 
 Some features are available only on a paid plan rather than being metered.
 Study history — your past practice sessions, flashcard reviews, mock test

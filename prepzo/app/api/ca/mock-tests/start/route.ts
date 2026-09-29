@@ -28,13 +28,22 @@ export async function POST(request: Request) {
 
     const body: { paper?: string; test_paper_id?: string } = await request.json().catch(() => ({}));
     const paper = typeof body.paper === "string" && body.paper.trim() ? body.paper.trim() : "Unknown";
+    const testPaperId = body.test_paper_id ?? null;
 
     const service = await createServiceClient();
-    const plan = await resolvePlan(service, user.id);
-    const quota = await consumeQuota(service, user.id, plan.id, "mock_tests");
 
-    if (!quota.ok) {
-      return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
+    // Only a real uploaded paper is a "mock test". A Practice Set is a
+    // different feature that samples questions the student has ALREADY
+    // generated — it triggers no Gemini call and costs nothing, so charging
+    // the mock-test allowance for it would bill them for the same content
+    // twice. Both modes share this route because they share the runner.
+    let quota = null as Awaited<ReturnType<typeof consumeQuota>> | null;
+    if (testPaperId) {
+      const plan = await resolvePlan(service, user.id);
+      quota = await consumeQuota(service, user.id, plan.id, "mock_tests");
+      if (!quota.ok) {
+        return NextResponse.json({ error: quota.message, quota_exhausted: true }, { status: 402 });
+      }
     }
 
     // completed_at stays null until /finish, which is how an abandoned test
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
       .insert({
         user_id: user.id,
         paper,
-        test_paper_id: body.test_paper_id ?? null,
+        test_paper_id: testPaperId,
         completed_at: null,
       })
       .select("id")
@@ -53,11 +62,17 @@ export async function POST(request: Request) {
     if (error || !attempt) {
       console.error("CA mock attempt insert failed:", error);
       // The student got nothing, so don't spend their allowance on it.
-      await releaseQuota(service, user.id, "mock_tests", quota.periodStart);
+      if (quota) await releaseQuota(service, user.id, "mock_tests", quota.periodStart);
       return NextResponse.json({ error: "Could not start the test" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, attempt_id: attempt.id, used: quota.used, cap: quota.cap });
+    return NextResponse.json({
+      success: true,
+      attempt_id: attempt.id,
+      metered: Boolean(quota),
+      used: quota?.used ?? null,
+      cap: quota?.cap ?? null,
+    });
   } catch (error) {
     console.error("CA mock test start error:", error);
     return NextResponse.json({ error: "Could not start the test" }, { status: 500 });

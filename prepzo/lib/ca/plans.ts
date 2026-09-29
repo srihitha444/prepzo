@@ -39,7 +39,6 @@ const unlimited = (cap: number): Quota => ({ cap, marketedAsUnlimited: true });
 export type MeteredFeature =
   | "uploads"
   | "cheatsheets"
-  | "past_paper_tests"
   | "mock_tests"
   | "tutor_messages";
 
@@ -47,15 +46,15 @@ export type MeteredFeature =
 export const FEATURE_PERIOD: Record<MeteredFeature, "day" | "month"> = {
   uploads: "month",
   cheatsheets: "month",
-  past_paper_tests: "month",
   mock_tests: "month",
   tutor_messages: "day",
 };
 
 export const FEATURE_LABEL: Record<MeteredFeature, string> = {
-  uploads: "uploads",
+  // One allowance covers every document the student uploads, whether a study
+  // note or a real exam paper — both cost the same Gemini vision call.
+  uploads: "document uploads",
   cheatsheets: "cheatsheets",
-  past_paper_tests: "past paper tests",
   mock_tests: "mock tests",
   tutor_messages: "AI Teacher messages",
 };
@@ -94,7 +93,6 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     quotas: {
       uploads: limited(2),
       cheatsheets: limited(1),
-      past_paper_tests: limited(1),
       mock_tests: limited(1),
       tutor_messages: limited(5),
     },
@@ -112,8 +110,7 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     quotas: {
       uploads: limited(15),
       cheatsheets: limited(5),
-      past_paper_tests: limited(6),
-      mock_tests: limited(15),
+      mock_tests: limited(6),
       tutor_messages: limited(20),
     },
     questionsPerUpload: 40,
@@ -132,8 +129,7 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     quotas: {
       uploads: unlimited(50),
       cheatsheets: unlimited(50),
-      past_paper_tests: unlimited(30),
-      mock_tests: unlimited(50),
+      mock_tests: unlimited(30),
       tutor_messages: unlimited(200),
     },
     questionsPerUpload: 100,
