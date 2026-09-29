@@ -2,7 +2,9 @@
 
 Read this before picking up CA vertical work in a new session. It captures what's been built, why it deviates from `01_EXAM_PATTERNS.md`–`10_GOOGLE_CLOUD.md` (the original spec docs in this same folder), what's still pending, and where the bodies are buried.
 
-**User:** Srihitha (itssrihitha555@gmail.com). Communicate results directly — she tests locally and reports back with exact error text, which has been the fastest path to root-causing bugs so far. Keep answering "which SQL do I need to run" precisely and in order when asked; it comes up often.
+**User:** Srihitha (itssrihitha555@gmail.com). Communicate results directly — she tests locally and reports back with exact error text, which has been the fastest path to root-causing bugs so far. Keep answering "which SQL do I need to run" precisely and in order when asked; it comes up often, and §5 now carries a verified table rather than a guess.
+
+**Where things stand (2026-09-29).** Production is live and current with `origin/main`. Three commits sit locally, unpushed, adding paid plans, metering, auto-renewing Razorpay subscriptions and rewritten legal documents. They are held back on purpose: `supabase/ca-plans-and-metering.sql` must run first or metering fails closed and blocks every student. Razorpay setup (§6) is the other prerequisite. **Verify claims in this file against the code before relying on them** — two entries here have already been found stale and corrected (Fluid Compute in §7, the extraction table rule in §4).
 
 ---
 
@@ -145,7 +147,17 @@ Also fixed this stretch, smaller: **CA syllabus data errors** in `lib/ca-syllabu
   **Deliberately not fixed:** scores are still computed in the browser, so a student can report a better score than they earned. That's a cosmetic lie about their own history, not a way to take more tests than they paid for. Grading server-side means moving the whole answer model across — much larger, much smaller payoff.
 - **Multilingual content was dropped** from the plan matrix — it was listed as a Premium entitlement but no such feature exists to gate.
 
-**Still outstanding:** the Terms and Privacy Policy (rewritten in 88cfb7a to describe a free product) contradict a paid, auto-renewing tier and must change before anything charges money — recurring billing in particular needs the renewal terms, cancellation rights and refund position stated. There is also no refund flow and no "you're running low" prompt before a quota is hit. Razorpay needs `RAZORPAY_WEBHOOK_SECRET` set and a webhook configured against `subscription.charged`, `subscription.halted`, `subscription.cancelled` and `subscription.completed` — without it, nothing renews.
+**Phase 16 — Legal documents rewritten for paid, auto-renewing plans under Indian law.**
+
+- **Two statements in the live documents were actively false, not merely outdated.** The Terms said *"We do not operate paid plans, subscriptions... we do not process payments"*. Both documents said material generated from a user's uploads is scoped to their own account and cannot reach other users — which the Phase 14 derivation cache does exactly. The second is the one that mattered: a specific promise to users that the caching work broke.
+- **The Privacy Policy granted rights under GDPR, CalOPPA and CCPA and mentioned the DPDP Act zero times** — backwards for a service offered only in India. Those three sections were replaced with DPDP Act 2023 rights: access, correction and erasure, withdrawal of consent, grievance redressal, and nomination, plus the Data Principal duties and the route to the Data Protection Board. The transfer section was also rewritten: it described data flowing *into* India, when the real disclosure is outbound processing by Gemini.
+- **Terms additions:** India-only scope; automatic renewal as its own section including the failed-payment path; cancellation and refunds; fair-use ceilings behind "unlimited"; a **per-upload warranty** that the user lawfully holds the material; an **ICAI-specific clause** naming study material, practice manuals, RTPs, MTPs and past papers, and noting coaching material is typically licensed personally; an **indemnity**; and a one-account-one-person rule where termination for sharing carries no refund.
+- **Grievance timelines use the IT Rules 2021 figures** (24h acknowledge / 15 days resolve) rather than the E-Commerce Rules' 48h/one month. Prepzo stores user uploads so it is very likely an intermediary under the IT Act, and the stricter pair satisfies both regimes — one timeline instead of two competing ones.
+- **Inherited generator junk removed:** a PolicyMaker.io advert in each document, US DMCA law (17 U.S.C. 512) cited as the takedown basis for an Indian service, an unfilled `"laws of  and foreign countries"` blank, and broken `0.1/0.2` list numbering.
+- **Entity details are real:** Prepzo, a sole proprietorship of S. Srihitha registered under Udyam, Hyderabad jurisdiction, Grievance Officer named with `sri@prepzo.study`. **Assumption to re-check:** sole proprietorship was inferred from a Udyam registration under a trade name with an individual's residential address. The Udyam certificate states the actual organisation type; if it is anything else, the entity line in both documents needs correcting.
+- **Checkout consent is recorded, not just displayed.** The pricing page has an unticked-by-default checkbox linking both documents, buy buttons stay disabled until it is ticked, and `create-subscription` **rejects the request server-side** unless `accept_terms === true` — a checkbox nobody verifies proves nothing. Acceptance is stored per purchase as `terms_accepted_at` + `terms_version` (`TERMS_VERSION` in `lib/ca/plans.ts`, pinned to the document's "Last updated" date), so a disputed auto-renewal can be answered with the exact text the student saw. Bump both together when the Terms change.
+
+**Still outstanding:** there is no refund flow and no "you're running low" prompt before a quota is hit. The legal documents have **not been reviewed by a lawyer**, which they should be before the first real charge — the RBI rules on recurring card mandates in particular. Superseded note, kept for context: the Terms and Privacy Policy (rewritten in 88cfb7a to describe a free product) contradicted a paid, auto-renewing tier — recurring billing in particular needs the renewal terms, cancellation rights and refund position stated. There is also no refund flow and no "you're running low" prompt before a quota is hit. Razorpay needs `RAZORPAY_WEBHOOK_SECRET` set and a webhook configured against `subscription.charged`, `subscription.halted`, `subscription.cancelled` and `subscription.completed` — without it, nothing renews.
 
 ## 4. Bugs found and fixed this session (worth knowing about, not just "done")
 
@@ -203,6 +215,20 @@ If any of 4–7 changes in a future session, `ca-all-pending-migrations.sql` mus
 **Phase 14 (shared derivation cache) — one new standalone file, not yet run:**
 - `supabase/ca-generation-cache.sql` — `user_notes.file_hash`, `ca_extraction_cache`, `ca_generation_cache`. Every schema change for the caching feature is in this one file. Service-role RLS only: nothing reads these tables as the student, since a cache hit *copies* rows into the student's own `questions`/`flashcards`. **Until this is run, the cache code is inert** — `file_hash` writes silently no-op and every lookup misses, so uploads and generation keep working exactly as before, just without caching.
 
+**VERIFIED STATE as of 2026-09-29** (checked against the live database by probing for each file's objects, not from memory — this is the answer to "which SQL do I need to run"):
+
+| Migration | State |
+|---|---|
+| `ca-notes-pipeline-schema.sql` | applied |
+| `ca-practice-history-schema.sql` | applied |
+| `ca-evaluation-teacher-mocktest-schema.sql` | applied |
+| `ca-test-papers-schema.sql` | applied |
+| `ca-cheatsheets-schema.sql` | applied |
+| `ca-case-study-questions.sql` | applied |
+| `ca-generation-cache.sql` | applied |
+| `ca-fix-mcq-option-case.sql` | applied |
+| **`ca-plans-and-metering.sql`** | **PENDING — the only one** |
+
 **Paid tiers — one new standalone file, must be run:**
 - `supabase/ca-plans-and-metering.sql` — extends `profiles.plan` to `mid`/`premium`, adds `ca_usage_counters` with the atomic `ca_consume_quota`/`ca_release_quota` functions, adds `ca_subscriptions` and `ca_razorpay_plans`, and **locks down `ca_mock_test_attempts` to service-write only** (the change that actually closes the mock-test meter bypass — until this runs, the meter is advisory). Encodes no limits or prices on purpose: those live in `lib/ca/plans.ts` so changing an allowance never needs a migration. **Until this is run, every metered action fails closed** — `consumeQuota` refuses when the RPC is missing, so uploads, cheatsheets, tutor messages, past papers and mock tests will all be blocked.
 
@@ -222,7 +248,28 @@ All migration files are idempotent (`if not exists` / `drop policy if exists` + 
 
 `prepzo/.env.local` needs `GEMINI_API_KEY` (Google AI Studio key). User has added one — confirmed live-working against the actual `generateContent` endpoint (tested via curl during this session, including JSON mode). Also needs adding to Vercel's project env vars for production (not yet confirmed done).
 
-No other new env vars — deliberately avoided the spec's `GOOGLE_CLOUD_PROJECT_ID`/`GOOGLE_CLOUD_PRIVATE_KEY`/`GCS_*`/`DOCUMENT_AI_PROCESSOR_ID` (see §2.2–2.4).
+Deliberately avoided the spec's `GOOGLE_CLOUD_PROJECT_ID`/`GOOGLE_CLOUD_PRIVATE_KEY`/`GCS_*`/`DOCUMENT_AI_PROCESSOR_ID` (see §2.2–2.4).
+
+**Razorpay (Phase 15).** Four variables, all needed in Vercel *and* `.env.local`:
+
+| Variable | Notes |
+|---|---|
+| `RAZORPAY_KEY_ID` | Dashboard → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | shown once at generation |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | same value as the key id; public by design |
+| `RAZORPAY_WEBHOOK_SECRET` | any long random string, matching the dashboard webhook |
+
+`RAZORPAY_KEY_SECRET` must **never** get a `NEXT_PUBLIC_` prefix — that would ship the signing key to every visitor and let anyone forge a payment confirmation.
+
+**Status as of 2026-09-29:** the keys in `.env.local` are test-mode (`rzp_test_…`) and **do not authenticate** — a live `GET /v1/plans` returns `401 Authentication failed`, so they are stale, revoked or placeholders and must be regenerated. `RAZORPAY_WEBHOOK_SECRET` is not set at all.
+
+**Account prerequisite, and the longest-lead item:** Razorpay **Subscriptions must be enabled on the account**. Recurring billing is not available by default — it needs KYC/activation, and recurring mandates (cards, UPI Autopay, eMandate) are separately enabled. On an account without it, `POST /v1/subscriptions` fails however correct the code is.
+
+**Webhook** (Dashboard → Settings → Webhooks): URL `https://www.prepzo.study/api/ca/billing/webhook`, secret matching `RAZORPAY_WEBHOOK_SECRET`, subscribed to `subscription.charged`, `subscription.halted`, `subscription.cancelled`, `subscription.completed`. `subscription.charged` is the critical one — only the first payment passes through the browser, so **every renewal after that arrives solely via this webhook**. Without it students are charged repeatedly and never extended.
+
+**Not needed:** no Razorpay plan IDs. The app creates each plan on first use and caches the id in `ca_razorpay_plans`, keyed by amount, so a price change creates a new plan rather than quietly charging the old one. `RAZORPAY_MONTHLY_PLAN_ID` still sits in `.env.local` as a NEET leftover and is read by nothing — safe to delete.
+
+Test and live keys are not interchangeable: a test-mode webhook secret will not validate live-mode webhooks, so all four variables must be switched together.
 
 ---
 
@@ -239,7 +286,19 @@ Everything compiles clean (`tsc`, `eslint`, `npm run build` all pass as of end o
 - History's Descriptive-vs-MCQ session labeling and the Dashboard's new Mock Test tile — both simple enough not to expect issues, but not yet clicked through by the user.
 - Change Email / Delete Account on a real (ideally disposable) account — the code path is confirmed correct (RLS policies checked, FK cascade chain traced through `schema.sql`), but neither has been exercised against a real account in either vertical yet.
 
-**Push status as of this writing** (check `git log`/`git status` in `prepzo/` — this drifts fast and is the one thing most likely to be stale by the time this is read again):
+**Push status as of 2026-09-29.** Production (`www.prepzo.study`) is **current with `origin/main`** — verified by fetching the live site and finding the landing copy from `1704b5c` and the footer socials from `b336cc9`. Deploys are working; the earlier Fluid Compute failure is resolved (see below).
+
+**Three commits are ready locally and deliberately NOT pushed:**
+
+```
+1f91ac1  Record that deploys are working again and production is current
+2a3ca38  Rewrite Terms and Privacy Policy for paid plans under Indian law
+8e53b24  Add paid plans, usage metering and auto-renewing subscriptions
+```
+
+`main` deploys to Vercel from GitHub, so `git push` *is* the deploy. **Pushing before `ca-plans-and-metering.sql` is run would break the live site**: metering fails closed by design, so with `ca_consume_quota` missing every upload, cheatsheet, AI Teacher message, past paper and mock test returns 402 for every student. Order: run the SQL, set the Razorpay variables (§6), then push.
+
+**Historical push status, kept for context** (check `git log`/`git status` in `prepzo/` — this drifts fast and is the one thing most likely to be stale by the time this is read again):
 - **Pushed and confirmed live** (`ca.prepzo.study`, verified via curl after each deploy): pricing removal (Phase 10), syllabus data fix, case-study support (Phase 8), Mock Test auto-detect (Phase 9), the onboarding-redirect vertical-aware fix, show/hide password, the `/auth/confirm` route + direct-to-storage upload + Cancel feature + the timeout raise to 3 minutes (Phase 11–12, all of it *except* the items below).
 - **Pushed but NOT deployed** (as of 2026-09-16 everything is on `origin/main` or `origin/ca-only`, but no build has succeeded since Aug 18 — see the Fluid Compute item below, and note that "pushed" and "live" have meant different things for the last month): image compression, the `pdf-lib` leniency (`throwOnInvalidObject: false`) + real-reason surfacing for "This file could not be opened", the patient Gemini retry schedule for extraction, the friendly-error fix in `processNote.ts`/`processTestPaper.ts`, and the Cheatsheet tax-codes/thresholds prompt strengthening (Phase 7's content requirement).
 - **RESOLVED 2026-09-29: deploys are working again and production is current with `origin/main`.** Verified by fetching the live site: the landing-page copy from `1704b5c` and the footer socials from `b336cc9` are both served, and those commits post-date the failure. Since `maxDuration = 180` is still declared in `notes/upload`, `test-papers/upload` and `notes/reextract`, a succeeding build means the 60s Hobby cap no longer applies — Fluid Compute was enabled (or the plan changed). **Do not lower `maxDuration` to 60**: `PROCESSING_TIMEOUT_MS` is 165s, so a 60s cap would kill the function 105s before the app-level timeout can record a reason. The original diagnosis, kept for context: **Vercel Fluid Compute was OFF, and it silently blocked every deploy from ~2026-08-21 to ~2026-09-16** (found 2026-09-16 from a build log, correcting this file's earlier claim that it was enabled as of 2026-09-05). On the Hobby plan, functions cap at 60s without it, so the builder rejects the three routes that declare `maxDuration = 180` — `notes/upload`, `test-papers/upload`, `notes/reextract` — with *"Builder returned invalid maxDuration value ... must have a maxDuration between 1 and 60 for plan hobby"*. Proof it is a settings change and not a code regression: commit `4900448` (the one that raised maxDuration to 180) built **Ready** on Aug 18 and the **same commit** failed on redeploy Aug 21. Production has served Aug-18 code ever since; failed builds never replace the last good deployment, which is why nothing looked broken. **Fix: Vercel → Settings → Functions → enable Fluid Compute, then redeploy.** Do NOT lower `maxDuration` to 60 instead — `PROCESSING_TIMEOUT_MS` is 165s, so a 60s cap kills the function 105s before the app-level timeout can record a reason, reintroducing the stuck-on-"Processing" bug Phase 12 exists to fix. If Fluid Compute is genuinely unavailable, both numbers have to come down together.
@@ -414,6 +473,40 @@ components/auth/                       LoginForm.tsx/SignupForm.tsx — original
                                         path is gone (§1a); both have a show/hide password toggle. ResetPasswordForm.tsx
                                         (Phase 11) — reached via /auth/confirm after a token_hash verification,
                                         collects + sets a new password (supabase.auth.updateUser).
+
+lib/ca/plans.ts                        The plan matrix — prices, quotas, per-upload ceilings, TERMS_VERSION.
+                                        Single source of truth: the pricing page and the enforcement code read
+                                        the same module, so the page cannot advertise a limit the server won't
+                                        honour. No quota is truly unlimited; marketedAsUnlimited only changes
+                                        the label (Phase 15)
+lib/ca/usage.ts                        consumeQuota/releaseQuota/resolvePlan. Consumption is atomic via the
+                                        ca_consume_quota RPC and FAILS CLOSED — a metering outage refuses the
+                                        action rather than allowing it. resolvePlan self-heals expiry, since a
+                                        lapsed subscription writes nothing and would otherwise keep paid access
+lib/ca/razorpay.ts                     REST, not the npm package. ensureRazorpayPlan caches a plan per
+                                        (tier, cycle, amount); createSubscription/cancelSubscription;
+                                        verifySubscriptionSignature — NOTE the field order is
+                                        payment_id|subscription_id, the REVERSE of the one-time order form
+lib/ca/checkout.ts                     Browser checkout — opens Razorpay with subscription_id (not order_id,
+                                        which is what makes it a recurring mandate) and posts the signed
+                                        result to /billing/verify
+
+app/api/ca/billing/create-subscription  POST — amount from plans.ts server-side, never the request; refuses
+                                        without accept_terms; records terms_accepted_at + terms_version
+app/api/ca/billing/verify              POST — browser path; signature check is the whole security boundary
+app/api/ca/billing/webhook             POST — Razorpay path, and the PRIMARY channel: every renewal after the
+                                        first arrives only here. Idempotent with verify
+app/api/ca/billing/cancel              POST — cancels at cycle end; the student keeps the period they paid for
+app/api/ca/mock-tests/start            POST — consumes the mock-test quota AND creates the attempt row
+app/api/ca/mock-tests/finish           POST — fills in the score on that row
+
+components/ca/PricingTable.tsx         Monthly/yearly toggle, plan cards, cancellation strip, and the
+                                        Terms-acceptance checkbox that gates checkout
+
+content/terms/terms-and-conditions.md  Terms — paid plans, auto-renewal, cancellation, refunds, upload
+                                        warranty + ICAI clause + indemnity, one-account-one-person (Phase 16)
+content/privacy-policy/privacy-policy.md  Privacy Policy — DPDP Act 2023 rights, India-only, derivation-cache
+                                        disclosure, Razorpay and usage-counter data (Phase 16)
 
 supabase/*.sql                         See §5 for exact list and order
 ```
