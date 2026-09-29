@@ -157,6 +157,13 @@ Also fixed this stretch, smaller: **CA syllabus data errors** in `lib/ca-syllabu
 - **Entity details are real:** Prepzo, a sole proprietorship of S. Srihitha registered under Udyam, Hyderabad jurisdiction, Grievance Officer named with `sri@prepzo.study`. **Assumption to re-check:** sole proprietorship was inferred from a Udyam registration under a trade name with an individual's residential address. The Udyam certificate states the actual organisation type; if it is anything else, the entity line in both documents needs correcting.
 - **Checkout consent is recorded, not just displayed.** The pricing page has an unticked-by-default checkbox linking both documents, buy buttons stay disabled until it is ticked, and `create-subscription` **rejects the request server-side** unless `accept_terms === true` — a checkbox nobody verifies proves nothing. Acceptance is stored per purchase as `terms_accepted_at` + `terms_version` (`TERMS_VERSION` in `lib/ca/plans.ts`, pinned to the document's "Last updated" date), so a disputed auto-renewal can be answered with the exact text the student saw. Bump both together when the Terms change.
 
+**Phase 17 — Plan revisions (2026-09-29).** After the first pass, the middle tier was renamed and several allowances changed:
+
+- **"Mid" is now "Pro"**, id `mid` -> `pro`. The stored values and three CHECK constraints move in `supabase/ca-rename-mid-to-pro.sql`. Each constraint is widened to accept both values, the data migrated, then narrowed — dropping straight to `('pro','premium')` while rows still said `mid` would fail the constraint and abort the script. No rows were actually on `mid` (nobody had subscribed), so it was constraint-only.
+- **Pro cheatsheets 15 -> 5, Pro past paper tests unlimited -> 6.** Past papers no longer read "unlimited" on Pro, which also removes the oddity that Pro and Premium both capped at 30.
+- **Study history is now a paid entitlement** (`historyAccess` in `lib/ca/plans.ts`). Unlike the quotas this is a straight on/off flag, so it is checked at `app/(app)/history/page.tsx` rather than metered, and it uses `resolvePlan()` so a lapsed subscription loses access at period end. Gated at the page, not by hiding the nav link, so the URL itself is protected.
+- **Mock tests were removed from the pricing table** and replaced with the history row. **Known inconsistency:** mock tests are still metered (Free 1 / Pro 15 / Premium 50) but no longer advertised, while Terms section 4 says plan limits "are shown on our pricing page". A student can therefore hit an undisclosed cap. Either put the row back, or stop metering mock tests — they are assembled from the student's own generated questions, which are already limited upstream by uploads and questions-per-upload, so the separate cap is arguably redundant.
+
 **Still outstanding:** there is no refund flow and no "you're running low" prompt before a quota is hit. The legal documents have **not been reviewed by a lawyer**, which they should be before the first real charge — the RBI rules on recurring card mandates in particular. Superseded note, kept for context: the Terms and Privacy Policy (rewritten in 88cfb7a to describe a free product) contradicted a paid, auto-renewing tier — recurring billing in particular needs the renewal terms, cancellation rights and refund position stated. There is also no refund flow and no "you're running low" prompt before a quota is hit. Razorpay needs `RAZORPAY_WEBHOOK_SECRET` set and a webhook configured against `subscription.charged`, `subscription.halted`, `subscription.cancelled` and `subscription.completed` — without it, nothing renews.
 
 ## 4. Bugs found and fixed this session (worth knowing about, not just "done")
@@ -227,9 +234,13 @@ If any of 4–7 changes in a future session, `ca-all-pending-migrations.sql` mus
 | `ca-case-study-questions.sql` | applied |
 | `ca-generation-cache.sql` | applied |
 | `ca-fix-mcq-option-case.sql` | applied |
-| **`ca-plans-and-metering.sql`** | **PENDING — the only one** |
+| `ca-plans-and-metering.sql` | applied 2026-09-29 |
+| **`ca-rename-mid-to-pro.sql`** | **PENDING — the only one** |
 
-**Paid tiers — one new standalone file, must be run:**
+**Plan rename — one new standalone file, must be run:**
+- `supabase/ca-rename-mid-to-pro.sql` — renames the `mid` plan to `pro` across `profiles`, `ca_subscriptions` and `ca_razorpay_plans`. Run this **instead of** re-running `ca-plans-and-metering.sql`, which is already applied. Ends with a verification query that should return three rows all reading 0.
+
+**Paid tiers — already applied 2026-09-29:**
 - `supabase/ca-plans-and-metering.sql` — extends `profiles.plan` to `mid`/`premium`, adds `ca_usage_counters` with the atomic `ca_consume_quota`/`ca_release_quota` functions, adds `ca_subscriptions` and `ca_razorpay_plans`, and **locks down `ca_mock_test_attempts` to service-write only** (the change that actually closes the mock-test meter bypass — until this runs, the meter is advisory). Encodes no limits or prices on purpose: those live in `lib/ca/plans.ts` so changing an allowance never needs a migration. **Until this is run, every metered action fails closed** — `consumeQuota` refuses when the RPC is missing, so uploads, cheatsheets, tutor messages, past papers and mock tests will all be blocked.
 
 **MCQ generation fix — one new standalone file, must be run:**

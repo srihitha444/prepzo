@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const planId = body.plan;
     const cycle = body.cycle;
 
-    if (planId !== "mid" && planId !== "premium") {
+    if (planId !== "pro" && planId !== "premium") {
       return NextResponse.json({ error: "Choose a paid plan" }, { status: 400 });
     }
     if (cycle !== "monthly" && cycle !== "yearly") {

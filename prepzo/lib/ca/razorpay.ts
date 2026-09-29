@@ -47,7 +47,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export async function ensureRazorpayPlan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  params: { plan: "mid" | "premium"; cycle: "monthly" | "yearly"; amountPaise: number; name: string }
+  params: { plan: "pro" | "premium"; cycle: "monthly" | "yearly"; amountPaise: number; name: string }
 ): Promise<string> {
   const { data: cached } = await supabase
     .from("ca_razorpay_plans")

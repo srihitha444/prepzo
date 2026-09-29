@@ -60,7 +60,7 @@ page at https://www.prepzo.study/pricing, which forms part of these Terms.
 
 As at the date above, the paid plans are:
 
-  Mid      Rs. 129 per month, or Rs. 1,199 per year
+  Pro      Rs. 129 per month, or Rs. 1,199 per year
   Premium  Rs. 299 per month, or Rs. 2,799 per year
 
 All prices are in Indian Rupees and are inclusive of applicable taxes. Where a
@@ -137,6 +137,11 @@ generated per upload, AI Teacher messages, cheatsheets, past paper tests and
 mock tests. Allowances that reset monthly do so on the first day of each
 calendar month; allowances that reset daily do so each day. Unused allowance
 does not carry over.
+
+Some features are available only on a paid plan rather than being metered.
+Study history — your past practice sessions, flashcard reviews, mock test
+attempts and score trends over time — is available on the Pro and Premium
+plans only.
 
 Where a plan describes an allowance as "unlimited", it remains subject to a
 fair-use ceiling intended to prevent automated or abusive use. That ceiling is

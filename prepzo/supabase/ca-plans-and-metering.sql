@@ -19,7 +19,7 @@
 -- ============================================================================
 
 -- profiles.plan was CHECK (plan IN ('free','paid')) from the NEET era. CA needs
--- 'mid' and 'premium'. 'paid' is kept in the allowed set ONLY so existing rows
+-- 'pro' and 'premium'. 'paid' is kept in the allowed set ONLY so existing rows
 -- don't violate the constraint — lib/ca/plans.ts::getPlan() treats any
 -- unrecognised value (including 'paid') as Free, so nobody is silently granted
 -- paid limits by a legacy value.
@@ -27,7 +27,7 @@
 alter table public.profiles drop constraint if exists profiles_plan_check;
 alter table public.profiles
   add constraint profiles_plan_check
-  check (plan in ('free', 'mid', 'premium', 'paid'));
+  check (plan in ('free', 'pro', 'premium', 'paid'));
 
 
 -- ============================================================================
@@ -141,7 +141,7 @@ $$;
 create table if not exists ca_subscriptions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references profiles(id) on delete cascade,
-  plan text not null check (plan in ('mid', 'premium')),
+  plan text not null check (plan in ('pro', 'premium')),
   billing_cycle text not null check (billing_cycle in ('monthly', 'yearly')),
   -- Paise, as charged. Stored so a later price change never rewrites history.
   amount integer not null,
@@ -202,7 +202,7 @@ create index if not exists idx_ca_subs_expiry on ca_subscriptions(status, curren
 
 create table if not exists ca_razorpay_plans (
   id uuid default gen_random_uuid() primary key,
-  plan text not null check (plan in ('mid', 'premium')),
+  plan text not null check (plan in ('pro', 'premium')),
   billing_cycle text not null check (billing_cycle in ('monthly', 'yearly')),
   amount integer not null,
   razorpay_plan_id text not null,

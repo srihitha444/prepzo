@@ -9,7 +9,7 @@
  * hardcoding plan="paid"). This reintroduces paid tiers.
  */
 
-export type CaPlan = "free" | "mid" | "premium";
+export type CaPlan = "free" | "pro" | "premium";
 
 /**
  * The version of the Terms a subscriber is accepting, recorded against each
@@ -76,6 +76,12 @@ export interface CaPlanDefinition {
   flashcardsPerUpload: number;
 
   cheatsheetPdfDownload: boolean;
+  /**
+   * History (past practice sessions, flashcard sessions, mock attempts and the
+   * score trend) is a paid feature. Unlike the quotas this is a straight
+   * on/off entitlement, so it is checked at the page rather than metered.
+   */
+  historyAccess: boolean;
 }
 
 export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
@@ -95,24 +101,25 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     questionsPerUpload: 15,
     flashcardsPerUpload: 10,
     cheatsheetPdfDownload: false,
+    historyAccess: false,
   },
-  mid: {
-    id: "mid",
-    name: "Mid",
+  pro: {
+    id: "pro",
+    name: "Pro",
     tagline: "For steady, month-on-month prep",
     monthlyPrice: 129,
     yearlyPrice: 1199,
     quotas: {
       uploads: limited(15),
-      cheatsheets: limited(15),
-      // Sold as unlimited; the cap is an abuse guard no real student reaches.
-      past_paper_tests: unlimited(30),
+      cheatsheets: limited(5),
+      past_paper_tests: limited(6),
       mock_tests: limited(15),
       tutor_messages: limited(20),
     },
     questionsPerUpload: 40,
     flashcardsPerUpload: 20,
     cheatsheetPdfDownload: true,
+    historyAccess: true,
   },
   premium: {
     id: "premium",
@@ -132,16 +139,18 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     questionsPerUpload: 100,
     flashcardsPerUpload: 50,
     cheatsheetPdfDownload: true,
+    historyAccess: true,
   },
 };
 
-export const CA_PLAN_ORDER: CaPlan[] = ["free", "mid", "premium"];
-export const PAID_PLANS: CaPlan[] = ["mid", "premium"];
+export const CA_PLAN_ORDER: CaPlan[] = ["free", "pro", "premium"];
+export const PAID_PLANS: CaPlan[] = ["pro", "premium"];
 
 export function getPlan(plan: string | null | undefined): CaPlanDefinition {
-  // Anything unrecognised — including the legacy "paid" value still sitting in
-  // profiles.plan — falls back to Free rather than silently granting paid
-  // limits. Fail closed, never open.
+  // Anything unrecognised — including the legacy "paid" value and the retired
+  // "mid" id (renamed to "pro"; see supabase/ca-rename-mid-to-pro.sql, which
+  // migrates any stored rows) — falls back to Free rather than silently
+  // granting paid limits. Fail closed, never open.
   return CA_PLANS[plan as CaPlan] ?? CA_PLANS.free;
 }
 

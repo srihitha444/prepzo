@@ -159,7 +159,7 @@ export function PricingTable({
           const saving = yearlySaving(plan);
           const showYearly = cycle === "yearly" && plan.yearlyPrice !== null;
           const price = showYearly ? plan.yearlyPrice! : plan.monthlyPrice;
-          const featured = id === "mid";
+          const featured = id === "pro";
 
           return (
             <div
@@ -199,7 +199,9 @@ export function PricingTable({
                   {plan.cheatsheetPdfDownload ? ", with PDF download" : ""}
                 </Feature>
                 <Feature>{quotaLabel(plan.quotas.past_paper_tests)} past paper tests a month</Feature>
-                <Feature>{quotaLabel(plan.quotas.mock_tests)} mock tests a month</Feature>
+                <Feature>
+                  {plan.historyAccess ? "Full study history and score trends" : "No study history"}
+                </Feature>
               </ul>
 
               <div className="mt-6">

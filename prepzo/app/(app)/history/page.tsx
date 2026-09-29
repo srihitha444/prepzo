@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { resolvePlan } from "@/lib/ca/usage";
 import { CheckCircle2, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -46,6 +48,30 @@ export default async function CaHistoryPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
+
+  // History is a paid entitlement. Gated here rather than hiding the nav
+  // link, so the URL itself is protected — and resolvePlan is used rather
+  // than reading profiles.plan directly, so a lapsed subscription loses
+  // access at period end without anything else having to run.
+  const service = await createServiceClient();
+  const plan = await resolvePlan(service, user.id);
+  if (!plan.historyAccess) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-xl font-semibold text-[#0F172A]">Study history is a paid feature</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm text-[#64748B]">
+          Upgrade to see every practice session, flashcard review and mock attempt you&apos;ve done, along with
+          how your scores are trending over time.
+        </p>
+        <Link
+          href="/pricing"
+          className="mt-6 inline-flex rounded-xl bg-[#1E3A8A] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
+        >
+          See plans
+        </Link>
+      </div>
+    );
+  }
 
   const [{ data: quizRaw }, { data: flashcardRaw }, { data: mockTestRaw }, { data: notesRaw }] = await Promise.all([
     supabase
