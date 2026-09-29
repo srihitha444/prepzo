@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { PricingTable } from "@/components/ca/PricingTable";
 import { resolvePlan } from "@/lib/ca/usage";
@@ -13,19 +13,24 @@ export default async function PricingPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login?redirect=/pricing");
+  // Deliberately viewable signed out: this is linked from the landing page,
+  // and bouncing a prospective student to a login form before they can see
+  // what anything costs loses them. Checkout still requires an account —
+  // create-subscription rejects an unauthenticated request.
 
   // resolvePlan rather than reading profiles.plan: it also expires a lapsed
   // subscription, so someone landing here to renew sees Free instead of the
   // plan they no longer have.
   const service = await createServiceClient();
-  const plan = await resolvePlan(service, user.id);
+  const plan = user ? await resolvePlan(service, user.id) : null;
 
-  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+    : { data: null as { full_name: string | null } | null };
 
   // Only surface the management strip for a plan that actually renews.
   const { data: sub } =
-    plan.id === "free"
+    !user || plan?.id === "free"
       ? { data: null }
       : await service
           .from("ca_subscriptions")
@@ -46,9 +51,10 @@ export default async function PricingPage() {
 
       <div className="mt-10">
         <PricingTable
-          currentPlan={plan.id}
+          signedIn={Boolean(user)}
+          currentPlan={plan?.id}
           subscription={sub ? { renewsOn: sub.current_period_end, cancelRequested: Boolean(sub.cancel_requested_at) } : null}
-          userEmail={user.email}
+          userEmail={user?.email}
           userName={profile?.full_name ?? undefined}
         />
       </div>

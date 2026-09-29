@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, UploadCloud, Brain, Layers, MessageCircle, BarChart2, ClipboardCheck, NotebookPen, Settings, LogOut, ChevronDown } from "lucide-react";
+import { LayoutDashboard, UploadCloud, Brain, Layers, MessageCircle, BarChart2, ClipboardCheck, NotebookPen, Settings, LogOut, ChevronDown, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/supabase/types";
+import { getPlan } from "@/lib/ca/plans";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, id: "ca-nav-dashboard" },
@@ -26,6 +27,10 @@ interface CaSidebarProps {
 export function CaSidebar({ profile }: CaSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  // Nothing linked to /pricing except two paywall messages, so the paid plans
+  // were effectively invisible to a signed-in student. Surfaced here as the
+  // current plan plus a way to change it.
+  const plan = getPlan(profile?.plan);
   const [profileOpen, setProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +89,14 @@ export function CaSidebar({ profile }: CaSidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-[#E2E8F0] space-y-1">
+        {plan.id === "free" && (
+          <Link
+            href="/pricing"
+            className="mb-2 flex items-center justify-center gap-1.5 rounded-xl bg-[#1E3A8A] px-3 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
+          >
+            <Sparkles size={15} /> Upgrade
+          </Link>
+        )}
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setProfileOpen((o) => !o)}
@@ -96,12 +109,21 @@ export function CaSidebar({ profile }: CaSidebarProps) {
               <p className="text-sm font-medium text-[#0F172A] truncate">
                 {profile?.name || "Student"}
               </p>
+              <p className="truncate text-xs text-[#64748B]">{plan.name} plan</p>
             </div>
             <ChevronDown size={14} className={`text-[#94A3B8] transition-transform ${profileOpen ? "rotate-180" : ""}`} />
           </button>
 
           {profileOpen && (
             <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-[#E2E8F0] rounded-xl shadow-lg overflow-hidden z-50">
+              <Link
+                href="/pricing"
+                onClick={() => setProfileOpen(false)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[#0F172A] hover:bg-[#F8FAFF] transition-all"
+              >
+                <Sparkles size={15} />
+                Plans &amp; Pricing
+              </Link>
               <Link
                 href="/settings"
                 onClick={() => setProfileOpen(false)}

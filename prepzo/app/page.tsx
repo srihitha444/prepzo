@@ -63,6 +63,9 @@ export default function CaLandingPage() {
             <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Features
             </a>
+            <Link href="/pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
+              Pricing
+            </Link>
             <Link href="/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
               Login
             </Link>
@@ -323,6 +326,7 @@ export default function CaLandingPage() {
           <div className="flex flex-1 justify-end">
             <div className="grid gap-4 text-sm font-medium text-[#64748B] md:grid-cols-2 md:justify-items-end md:text-right">
               <div className="flex flex-col gap-2">
+                <Link href="/pricing" className="hover:text-[#0F172A] transition-colors">Pricing</Link>
                 <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
                 <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
               </div>

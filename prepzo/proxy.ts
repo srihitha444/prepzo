@@ -23,6 +23,11 @@ const REDIRECT_HOSTS = new Set([
 
 const PUBLIC_PATHS = [
   "/",
+  // Viewable signed out on purpose: it is linked from the landing page, and
+  // bouncing a prospective student to a login form before they can see what
+  // anything costs loses them. Checkout still requires an account —
+  // /api/ca/billing/create-subscription rejects an unauthenticated request.
+  "/pricing",
   "/terms",
   "/privacy-policy",
   "/robots.txt",

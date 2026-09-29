@@ -27,11 +27,13 @@ export interface ActiveSubscription {
 }
 
 export function PricingTable({
+  signedIn = true,
   currentPlan = "free",
   subscription,
   userEmail,
   userName,
 }: {
+  signedIn?: boolean;
   currentPlan?: CaPlan;
   subscription?: ActiveSubscription | null;
   userEmail?: string;
@@ -130,6 +132,7 @@ export function PricingTable({
         </div>
       </div>
 
+      {signedIn && (
       <label className="mx-auto mb-6 flex max-w-2xl cursor-pointer items-start gap-3 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3">
         <input
           type="checkbox"
@@ -151,6 +154,7 @@ export function PricingTable({
           permitted to use.
         </span>
       </label>
+      )}
 
       <div className="grid gap-5 md:grid-cols-3">
         {CA_PLAN_ORDER.map((id) => {
@@ -205,7 +209,14 @@ export function PricingTable({
               </ul>
 
               <div className="mt-6">
-                {isCurrent ? (
+                {!signedIn ? (
+                  <Link
+                    href={`/auth/signup?plan=${id}`}
+                    className="flex w-full items-center justify-center rounded-xl bg-[#1E3A8A] py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
+                  >
+                    {plan.monthlyPrice === 0 ? "Start free" : `Get ${plan.name}`}
+                  </Link>
+                ) : isCurrent ? (
                   <div className="rounded-xl border border-[#E2E8F0] py-3 text-center text-sm font-semibold text-[#64748B]">
                     Your current plan
                   </div>
