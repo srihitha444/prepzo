@@ -31,7 +31,11 @@ type ServiceClient = any;
  * more than the exact boundary, since period_start is a stored key: changing
  * the rule later strands existing counter rows in the old window.
  */
-export function periodStart(feature: MeteredFeature, now: Date = new Date()): string {
+export function periodStart(feature: MeteredFeature, planId?: string, now: Date = new Date()): string {
+  // Free plan uploads are lifetime for the whole account, not resetting monthly
+  if (planId === "free" && feature === "uploads") {
+    return "1970-01-01T00:00:00.000Z";
+  }
   const d = new Date(now);
   d.setUTCHours(0, 0, 0, 0);
   if (FEATURE_PERIOD[feature] === "month") d.setUTCDate(1);
@@ -61,9 +65,10 @@ export async function getUsage(
 
   return features.map((feature) => {
     const quota = quotaFor(plan, feature);
+    const expectedStart = periodStart(feature, plan.id);
     const row = (data || []).find(
       (r: { feature: string; period_start: string }) =>
-        r.feature === feature && new Date(r.period_start).toISOString() === periodStart(feature)
+        r.feature === feature && new Date(r.period_start).toISOString() === expectedStart
     );
     const used = row?.used ?? 0;
     return {
@@ -94,7 +99,7 @@ export async function consumeQuota(
 ): Promise<ConsumeResult> {
   const plan = getPlan(planName);
   const quota = quotaFor(plan, feature);
-  const start = periodStart(feature);
+  const start = periodStart(feature, plan.id);
 
   if (quota.cap <= 0) {
     return { ok: false, used: 0, cap: 0, periodStart: start, message: exhaustedMessage(plan, feature) };
@@ -147,8 +152,13 @@ export async function releaseQuota(
 
 function exhaustedMessage(plan: CaPlanDefinition, feature: MeteredFeature): string {
   const quota = quotaFor(plan, feature);
-  const window = FEATURE_PERIOD[feature] === "day" ? "today" : "this month";
   const label = FEATURE_LABEL[feature];
+
+  if (plan.id === "free" && feature === "uploads") {
+    return `You've used both of your 2 free document uploads included with your account. Upgrade to Pro for monthly uploads.`;
+  }
+
+  const window = FEATURE_PERIOD[feature] === "day" ? "today" : "this month";
 
   if (quota.marketedAsUnlimited) {
     // Hitting an "unlimited" cap means the abuse guard fired, not that the

@@ -19,7 +19,7 @@ export type CaPlan = "free" | "pro" | "premium";
  * student saw.
  */
 export const TERMS_VERSION = "2026-09-24";
-export type BillingCycle = "monthly" | "yearly";
+export type BillingCycle = "monthly" | "quarterly" | "half_yearly" | "yearly";
 
 /**
  * A metered allowance. `cap` is ALWAYS a real number — there is no true
@@ -65,6 +65,10 @@ export interface CaPlanDefinition {
   tagline: string;
   /** Rupees per month on the monthly plan. 0 for free. */
   monthlyPrice: number;
+  /** Rupees for a 3-month block. null when the tier has no quarterly option. */
+  quarterlyPrice: number | null;
+  /** Rupees for a 6-month block. null when the tier has no half-yearly option. */
+  halfYearlyPrice: number | null;
   /** Rupees per year on the annual plan. null when the tier has no annual option. */
   yearlyPrice: number | null;
 
@@ -89,9 +93,11 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     name: "Free",
     tagline: "Try it on your own notes",
     monthlyPrice: 0,
+    quarterlyPrice: null,
+    halfYearlyPrice: null,
     yearlyPrice: null,
     quotas: {
-      uploads: limited(2),
+      uploads: limited(2), // 2 free uploads for the whole account (lifetime, not monthly)
       cheatsheets: limited(1),
       mock_tests: limited(1),
       tutor_messages: limited(5),
@@ -105,8 +111,10 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     id: "pro",
     name: "Pro",
     tagline: "For steady, month-on-month prep",
-    monthlyPrice: 129,
-    yearlyPrice: 1199,
+    monthlyPrice: 149,
+    quarterlyPrice: 399,
+    halfYearlyPrice: 749,
+    yearlyPrice: 1399,
     quotas: {
       uploads: limited(15),
       cheatsheets: limited(5),
@@ -123,8 +131,9 @@ export const CA_PLANS: Record<CaPlan, CaPlanDefinition> = {
     name: "Premium",
     tagline: "Everything, for the final stretch",
     monthlyPrice: 299,
-    // 12 x 299 = 3,588, discounted at the same ~22.5% as Mid (1,548 -> 1,199)
-    // and rounded to the _99 ending every other price uses. Saves 789.
+    quarterlyPrice: 799,
+    halfYearlyPrice: 1499,
+    // 12 × 299 = 3,588, discounted ~22% and rounded to a _99 ending.
     yearlyPrice: 2799,
     quotas: {
       uploads: unlimited(50),
@@ -159,14 +168,67 @@ export function quotaLabel(quota: Quota): string {
   return quota.marketedAsUnlimited ? "Unlimited" : String(quota.cap);
 }
 
-/** Yearly saving vs twelve months of the monthly price. Derived, never stored. */
+/** How many months each billing cycle covers. */
+export function cycleMonths(cycle: BillingCycle): number {
+  switch (cycle) {
+    case "monthly": return 1;
+    case "quarterly": return 3;
+    case "half_yearly": return 6;
+    case "yearly": return 12;
+  }
+}
+
+/** Human-readable label for a billing cycle. */
+export function cycleLabel(cycle: BillingCycle): string {
+  switch (cycle) {
+    case "monthly": return "Monthly";
+    case "quarterly": return "3 Months";
+    case "half_yearly": return "6 Months";
+    case "yearly": return "Yearly";
+  }
+}
+
+/** Price suffix shown next to the amount: "/month", "/3 months", etc. */
+export function cycleSuffix(cycle: BillingCycle): string {
+  switch (cycle) {
+    case "monthly": return "/month";
+    case "quarterly": return "/3 months";
+    case "half_yearly": return "/6 months";
+    case "yearly": return "/year";
+  }
+}
+
+/**
+ * Saving vs paying monthly for the same number of months.
+ * Returns null for monthly (no saving) or if the cycle price is null.
+ * @deprecated Use `cycleSaving` — `yearlySaving` is kept for call-sites that
+ * have not been migrated yet.
+ */
 export function yearlySaving(plan: CaPlanDefinition): number | null {
-  if (plan.yearlyPrice === null) return null;
-  return plan.monthlyPrice * 12 - plan.yearlyPrice;
+  return cycleSaving(plan, "yearly");
+}
+
+/** Saving vs paying monthly for the same number of months. */
+export function cycleSaving(plan: CaPlanDefinition, cycle: BillingCycle): number | null {
+  const price = priceFor(plan, cycle);
+  if (price === null || cycle === "monthly") return null;
+  return plan.monthlyPrice * cycleMonths(cycle) - price;
+}
+
+/** Per-month equivalent when paying for a multi-month cycle. */
+export function perMonth(plan: CaPlanDefinition, cycle: BillingCycle): number {
+  const price = priceFor(plan, cycle);
+  if (price === null) return plan.monthlyPrice;
+  return Math.round(price / cycleMonths(cycle));
 }
 
 export function priceFor(plan: CaPlanDefinition, cycle: BillingCycle): number | null {
-  return cycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+  switch (cycle) {
+    case "monthly": return plan.monthlyPrice;
+    case "quarterly": return plan.quarterlyPrice;
+    case "half_yearly": return plan.halfYearlyPrice;
+    case "yearly": return plan.yearlyPrice;
+  }
 }
 
 /** Razorpay works in paise. */

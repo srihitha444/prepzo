@@ -17,6 +17,9 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { PricingTable } from "@/components/ca/PricingTable";
+import { createClient } from "@/lib/supabase/client";
+import type { CaPlan } from "@/lib/ca/plans";
 
 /**
  * Every sample rendered on this page is a faithful mock-up of output the
@@ -31,20 +34,47 @@ import {
 type TabKey = "descriptive" | "practice" | "tutor" | "cheatsheet";
 
 const TABS: { key: TabKey; label: string; icon: typeof PenLine }[] = [
-  { key: "descriptive", label: "Descriptive", icon: PenLine },
-  { key: "practice", label: "Practice", icon: Sparkles },
-  { key: "tutor", label: "AI Teacher", icon: MessageCircle },
-  { key: "cheatsheet", label: "Cheatsheet", icon: NotebookPen },
+  { key: "descriptive", label: "Descriptive Grading", icon: PenLine },
+  { key: "practice", label: "Exam MCQs", icon: Sparkles },
+  { key: "tutor", label: "AI Tutor", icon: MessageCircle },
+  { key: "cheatsheet", label: "Quick Cheatsheets", icon: NotebookPen },
 ];
 
 export default function CaLandingPage() {
   const [tab, setTab] = useState<TabKey>("descriptive");
+  const [activeLevel, setActiveLevel] = useState<string>("Intermediate");
+  const [signedIn, setSignedIn] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<CaPlan>("free");
+  const [userEmail, setUserEmail] = useState<string | undefined>();
+  const [userName, setUserName] = useState<string | undefined>();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("code") || params.has("error")) {
       const callbackUrl = `/auth/callback${window.location.search}`;
       window.location.replace(callbackUrl);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }: any) => {
+        if (user) {
+          setSignedIn(true);
+          setUserEmail(user.email);
+          supabase
+            .from("profiles")
+            .select("plan, full_name")
+            .eq("id", user.id)
+            .single()
+            .then(({ data: profile }: any) => {
+              if (profile?.plan) setCurrentPlan(profile.plan);
+              if (profile?.full_name) setUserName(profile.full_name);
+            });
+        }
+      });
+    } catch {
+      // Unauthenticated visitor fallback
     }
   }, []);
 
@@ -63,9 +93,9 @@ export default function CaLandingPage() {
             <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Features
             </a>
-            <Link href="/pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
+            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
               Pricing
-            </Link>
+            </a>
             <Link href="/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
               Login
             </Link>
@@ -96,9 +126,9 @@ export default function CaLandingPage() {
                 <span className="text-[#1E3A8A]"> Now they&apos;re your question bank.</span>
               </h1>
               <p className="text-lg text-[#64748B] max-w-lg mx-auto md:mx-0 mb-9 leading-relaxed">
-                Upload a PDF of your CA notes and get exam-style MCQs, descriptive questions,
-                flashcards and cheatsheets back in minutes — generated from your material,
-                not someone else&apos;s.
+                Skip hours of manually building flashcards and question sets. Upload your CA notes
+                to generate exam-standard MCQs, step-by-step descriptive questions, and revision
+                cheatsheets in minutes.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
                 <Link href="/auth/signup" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-base font-semibold transition-all shadow-lg shadow-[#1E3A8A]/30">
@@ -128,10 +158,15 @@ export default function CaLandingPage() {
                 </div>
 
                 <div className="rounded-xl border border-[#E2E8F0] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                    MCQ · 2 marks · −0.25
-                  </p>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-[#0F172A]">
+                  <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-2 mb-2.5">
+                    <span className="inline-flex items-center gap-1 rounded bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#1E3A8A]">
+                      Subject: Accounting · Auto-Generated
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                      2 marks · −0.25
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-[#0F172A]">
                     As per AS 2, inventories are valued at:
                   </p>
                   <div className="mt-3 space-y-2">
@@ -168,10 +203,10 @@ export default function CaLandingPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
             <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">
-              See what one upload gives you
+              Turn one chapter into complete exam prep
             </h2>
             <p className="text-[#64748B] max-w-xl mx-auto">
-              Four things come out of the same file. Pick one to see the actual output.
+              Every upload automatically yields four distinct study tools—tailored to ICAI testing patterns.
             </p>
           </div>
 
@@ -243,28 +278,110 @@ export default function CaLandingPage() {
               Every level, every paper
             </h2>
             <p className="text-[#64748B] max-w-xl mx-auto">
-              Prepzo knows each paper&rsquo;s real format &mdash; which are objective, which are
-              descriptive, which mix both, and where negative marking applies.
+              Prepzo knows each paper&rsquo;s real format &mdash; objective MCQs, descriptive answers,
+              case studies, and where negative marking applies.
             </p>
           </div>
-          <div className="grid gap-5 md:grid-cols-3">
-            {LEVELS.map((lvl) => (
-              <div key={lvl.level} className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
-                <p className="font-[family-name:var(--font-fraunces)] text-xl font-bold text-[#1E3A8A]">
-                  {lvl.level}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[#94A3B8]">{lvl.meta}</p>
-                <ul className="mt-4 space-y-2">
-                  {lvl.papers.map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-sm text-[#64748B]">
-                      <Check size={14} className="mt-0.5 shrink-0 text-[#1E3A8A]" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+
+          {/* Interactive Tier Switcher Tabs */}
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex rounded-xl border border-[#E2E8F0] bg-white p-1 gap-1 shadow-sm">
+              {LEVELS.map((lvl) => (
+                <button
+                  key={lvl.level}
+                  onClick={() => setActiveLevel(lvl.level)}
+                  className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${
+                    activeLevel === lvl.level
+                      ? "bg-[#1E3A8A] text-white shadow-sm"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  CA {lvl.level}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Selected Tier Papers Card */}
+          {(() => {
+            const current = LEVELS.find((l) => l.level === activeLevel) || LEVELS[1];
+            return (
+              <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F1F5F9] pb-4 mb-6">
+                  <div>
+                    <h3 className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#0F172A]">
+                      CA {current.level}
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-0.5">{current.meta}</p>
+                  </div>
+                  <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-xs font-semibold text-[#1E3A8A]">
+                    {current.badge}
+                  </span>
+                </div>
+
+                {current.groups ? (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {current.groups.map((group) => (
+                      <div key={group.name} className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#1E3A8A] mb-3">
+                          {group.name}
+                        </h4>
+                        <ul className="space-y-2.5">
+                          {group.papers.map((p) => (
+                            <li
+                              key={p.name}
+                              className="flex items-center justify-between gap-2 rounded-lg bg-white p-2.5 border border-[#E2E8F0]/70 text-xs shadow-2xs"
+                            >
+                              <span className="font-medium text-[#0F172A]">{p.name}</span>
+                              <span className="shrink-0 text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded">
+                                {p.tag}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {current.papers?.map((p) => (
+                      <div
+                        key={p.name}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-3.5 text-xs"
+                      >
+                        <span className="font-medium text-[#0F172A]">{p.name}</span>
+                        <span className="shrink-0 text-[10px] font-semibold text-[#64748B] bg-white px-2 py-1 rounded border border-[#E2E8F0]">
+                          {p.tag}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="py-16 md:py-24 border-b border-[#E2E8F0]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10">
+            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">
+              Plans &amp; Pricing
+            </h2>
+            <p className="text-[#64748B] max-w-xl mx-auto">
+              Every plan works on your own notes — upload, generate questions and flashcards, and study them on a spaced
+              schedule. Paid plans raise the limits.
+            </p>
+          </div>
+          <PricingTable
+            signedIn={signedIn}
+            currentPlan={currentPlan}
+            userEmail={userEmail}
+            userName={userName}
+            hideTerms={true}
+          />
         </div>
       </section>
 
@@ -275,8 +392,7 @@ export default function CaLandingPage() {
             Start with one chapter.
           </h2>
           <p className="mx-auto mb-9 max-w-xl text-lg text-[#64748B] leading-relaxed">
-            Upload a single PDF and see what comes back. No card-making, no question hunting
-            &mdash; just your own material, turned into practice.
+            Upload your most challenging chapter and experience how much faster prep feels with instant evaluation and tailored recall.
           </p>
           <Link
             href="/auth/signup"
@@ -295,7 +411,7 @@ export default function CaLandingPage() {
             <p className="mt-2 max-w-xs text-xs leading-5 text-[#64748B]">
               Prepzo is an independent study platform and is not affiliated with ICAI.
             </p>
-            <p className="text-xs text-[#64748B]">Made for India students</p>
+            <p className="text-xs font-medium text-[#64748B]">Built for Indian CA aspirants</p>
           </div>
 
           <div className="flex min-w-[220px] flex-col items-center gap-3 text-sm text-[#64748B] md:items-start">
@@ -346,15 +462,21 @@ export default function CaLandingPage() {
 
 function FeatureRow({
   eyebrow,
+  badge,
+  badgeColor,
   title,
   body,
   sample,
+  highlight,
   reverse,
 }: {
   eyebrow: string;
+  badge?: string;
+  badgeColor?: string;
   title: string;
   body: string;
   sample: React.ReactNode;
+  highlight?: { label: string; text: string };
   reverse?: boolean;
 }) {
   return (
@@ -366,14 +488,29 @@ function FeatureRow({
           }`}
         >
           <div className="flex-1 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1E3A8A]">{eyebrow}</p>
-            <h3 className="mt-3 font-[family-name:var(--font-fraunces)] text-2xl md:text-3xl font-bold leading-tight text-[#0F172A]">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[#1E3A8A]">{eyebrow}</span>
+              {badge && (
+                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeColor || "bg-[#DBEAFE] text-[#1E3A8A]"}`}>
+                  {badge}
+                </span>
+              )}
+            </div>
+            <h3 className="font-[family-name:var(--font-fraunces)] text-2xl md:text-3xl font-bold leading-tight text-[#0F172A]">
               {title}
             </h3>
             <p className="mt-4 text-[#64748B] leading-relaxed">{body}</p>
+            {highlight && (
+              <div className="mt-5 rounded-xl border-l-4 border-[#1E3A8A] bg-[#F8FAFF] p-3.5 text-left border border-r-[#E2E8F0] border-y-[#E2E8F0]">
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-[#1E3A8A]">
+                  {highlight.label}
+                </span>
+                <span className="mt-0.5 block text-xs text-[#475569]">{highlight.text}</span>
+              </div>
+            )}
           </div>
           <div className="w-full flex-1 min-w-0">
-            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_10px_36px_rgba(30,58,138,0.10)]">
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_10px_36px_rgba(30,58,138,0.08)]">
               {sample}
             </div>
           </div>
@@ -643,36 +780,63 @@ const SAMPLES: Record<string, React.ReactNode> = {
 
 const FEATURE_ROWS: {
   eyebrow: string;
+  badge?: string;
+  badgeColor?: string;
   title: string;
   body: string;
   sampleKey: string;
+  highlight?: { label: string; text: string };
   reverse?: boolean;
 }[] = [
   {
-    eyebrow: "Descriptive answers",
+    eyebrow: "Descriptive Evaluation",
+    badge: "ICAI Marking Rubric",
+    badgeColor: "bg-[#DBEAFE] text-[#1E3A8A]",
     title: "CA is not an MCQ exam. Your practice should not be either.",
-    body: "Write a full answer the way you would in the exam hall and get it marked against the question’s mark allocation — point by point, with what you got right and what you left out. It works even on real papers that ship without a printed solution.",
+    body: "Write out a full answer the way you would in the examination hall. Prepzo marks your attempt against ICAI mark allocations—identifying key provisions you nailed and points you missed. It works even on papers without published suggested answers.",
     sampleKey: "descriptive",
+    highlight: {
+      label: "Mark Allocation Check",
+      text: "Evaluates exact conditions and sub-points so you know where you gained or dropped marks.",
+    },
   },
   {
-    eyebrow: "Real papers",
+    eyebrow: "Past & Mock Papers",
+    badge: "100% Verbatim Extraction",
+    badgeColor: "bg-[#DCFCE7] text-[#15803D]",
     title: "Practice the actual paper, not an approximation.",
-    body: "Upload a past or mock ICAI paper and Prepzo transcribes its questions verbatim — no generation, no paraphrasing. Case-study passages stay attached to every sub-question that reads off them.",
+    body: "Upload past or mock ICAI question papers and Prepzo transcribes every question verbatim—no hallucination, no unnecessary paraphrasing. Complex case-study passages stay directly attached to every dependent sub-question.",
     sampleKey: "realpaper",
     reverse: true,
+    highlight: {
+      label: "Case-Study Integrity",
+      text: "Multi-part questions remain grouped with their parent passage for authentic exam practice.",
+    },
   },
   {
-    eyebrow: "AI Teacher",
-    title: "A tutor that has read your notes.",
-    body: "Ask anything and get an answer grounded in the material you uploaded, not a generic explanation from the internet. Scope it to a single note when you are deep in one chapter, or leave it across everything you have added.",
+    eyebrow: "Contextual AI Tutor",
+    badge: "Grounded in Your Syllabus",
+    badgeColor: "bg-[#EDE9FE] text-[#6D28D9]",
+    title: "A dedicated tutor that has read your specific notes.",
+    body: "Ask doubts directly against your uploaded study notes. You get focused, syllabus-compliant explanations instead of generic internet answers. Focus questions on a single standard or your entire subject bank.",
     sampleKey: "tutor",
+    highlight: {
+      label: "Zero External Noise",
+      text: "Answers draw citations and definitions straight from your provided study documents.",
+    },
   },
   {
-    eyebrow: "Review & Recall",
-    title: "Meet every card again, just before you would forget it.",
-    body: "Every question and flashcard you practice comes back on a spaced schedule — sooner if you got it wrong, later once it sticks. Revision decides itself instead of becoming another thing to plan.",
+    eyebrow: "Adaptive Review",
+    badge: "Automated Spaced Repetition",
+    badgeColor: "bg-[#FEF3C7] text-[#B45309]",
+    title: "Meet every concept again, right before you forget it.",
+    body: "Every question and flashcard you attempt feeds into an intelligent spaced review queue. Challenging questions return tomorrow; mastered concepts return in weeks, freeing you from manual revision timetabling.",
     sampleKey: "recall",
     reverse: true,
+    highlight: {
+      label: "Scientifically Proven Retention",
+      text: "Spaced intervals ensure definitions, formulas, and section numbers stick until exam day.",
+    },
   },
 ];
 
@@ -736,40 +900,86 @@ const HOW_IT_WORKS = [
     icon: Sparkles,
   },
   {
-    title: "Practice and recall",
-    description: "Answer, get marked, and let spaced repetition bring each card back before you forget it.",
+    title: "Revise on autopilot",
+    description: "Practice with automatic spaced repetition. Cards and weak areas resurface right before you forget them, cementing long-term recall.",
     icon: Repeat2,
   },
 ];
 
-const LEVELS = [
+interface PaperInfo {
+  name: string;
+  tag: string;
+}
+
+interface LevelGroup {
+  name: string;
+  papers: PaperInfo[];
+}
+
+interface LevelConfig {
+  level: string;
+  meta: string;
+  badge: string;
+  groups?: LevelGroup[];
+  papers?: PaperInfo[];
+}
+
+const LEVELS: LevelConfig[] = [
   {
     level: "Foundation",
-    meta: "4 papers · 400 marks",
-    papers: ["Accounting", "Business Laws", "Quantitative Aptitude", "Business Economics"],
+    meta: "4 papers · 400 marks · ICAI Entry Level",
+    badge: "4 Papers",
+    papers: [
+      { name: "Paper 1: Accounting", tag: "Descriptive · 100 Marks" },
+      { name: "Paper 2: Business Laws", tag: "Descriptive · 100 Marks" },
+      { name: "Paper 3: Quantitative Aptitude", tag: "Objective (MCQ) · Negative Marking" },
+      { name: "Paper 4: Business Economics", tag: "Objective (MCQ) · Negative Marking" },
+    ],
   },
   {
     level: "Intermediate",
     meta: "6 papers · 2 groups · 600 marks",
-    papers: [
-      "Advanced Accounting",
-      "Corporate and Other Laws",
-      "Taxation",
-      "Cost and Management Accounting",
-      "Auditing and Ethics",
-      "Financial Management & Strategic Management",
+    badge: "6 Papers · 2 Groups",
+    groups: [
+      {
+        name: "Group 1",
+        papers: [
+          { name: "Paper 1: Advanced Accounting", tag: "30% MCQ + 70% Descriptive" },
+          { name: "Paper 2: Corporate and Other Laws", tag: "30% MCQ + 70% Descriptive" },
+          { name: "Paper 3: Taxation (DT & GST)", tag: "30% MCQ + 70% Descriptive" },
+        ],
+      },
+      {
+        name: "Group 2",
+        papers: [
+          { name: "Paper 4: Cost & Management Accounting", tag: "100% Practical & Descriptive" },
+          { name: "Paper 5: Auditing and Ethics", tag: "30% MCQ + 70% Descriptive" },
+          { name: "Paper 6: FM & Strategic Management", tag: "30% MCQ + 70% Descriptive" },
+        ],
+      },
     ],
   },
   {
     level: "Final",
-    meta: "6 papers · 2 groups",
-    papers: [
-      "Financial Reporting",
-      "Advanced Financial Management",
-      "Advanced Auditing, Assurance and Professional Ethics",
-      "Direct Tax Laws & International Taxation",
-      "Indirect Tax Laws",
-      "Integrated Business Solutions",
+    meta: "6 papers · 2 groups · Advanced Tier",
+    badge: "6 Papers · 2 Groups",
+    groups: [
+      {
+        name: "Group 1",
+        papers: [
+          { name: "Paper 1: Financial Reporting", tag: "Case Study & Ind AS Practical" },
+          { name: "Paper 2: Advanced Financial Management", tag: "Valuation & Strategy" },
+          { name: "Paper 3: Advanced Auditing & Ethics", tag: "Integrated ICAI Standards" },
+        ],
+      },
+      {
+        name: "Group 2",
+        papers: [
+          { name: "Paper 4: Direct Tax & Int'l Tax", tag: "Case Laws & Assessment" },
+          { name: "Paper 5: Indirect Tax Laws", tag: "GST & Customs Analysis" },
+          { name: "Paper 6: Integrated Business Solutions", tag: "Multi-Disciplinary Case Studies" },
+        ],
+      },
     ],
   },
 ];

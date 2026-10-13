@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getRequestUser } from "@/lib/supabase/api-auth";
 import { verifySubscriptionSignature, periodEnd } from "@/lib/ca/razorpay";
+import type { BillingCycle } from "@/lib/ca/plans";
 
 /**
  * Called by the browser once Razorpay checkout authorises the mandate.
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     const start = new Date();
-    const end = periodEnd(subscription.billing_cycle as "monthly" | "yearly", start);
+    const end = periodEnd(subscription.billing_cycle as BillingCycle, start);
 
     await service
       .from("ca_subscriptions")

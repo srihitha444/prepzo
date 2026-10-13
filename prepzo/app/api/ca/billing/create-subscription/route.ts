@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (planId !== "pro" && planId !== "premium") {
       return NextResponse.json({ error: "Choose a paid plan" }, { status: 400 });
     }
-    if (cycle !== "monthly" && cycle !== "yearly") {
+    if (cycle !== "monthly" && cycle !== "quarterly" && cycle !== "half_yearly" && cycle !== "yearly") {
       return NextResponse.json({ error: "Choose a billing cycle" }, { status: 400 });
     }
 

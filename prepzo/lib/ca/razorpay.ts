@@ -47,7 +47,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export async function ensureRazorpayPlan(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  params: { plan: "pro" | "premium"; cycle: "monthly" | "yearly"; amountPaise: number; name: string }
+  params: { plan: "pro" | "premium"; cycle: "monthly" | "quarterly" | "half_yearly" | "yearly"; amountPaise: number; name: string }
 ): Promise<string> {
   // A plan id configured by hand in the Razorpay dashboard wins over anything
   // this code would create. Held in the environment rather than seeded into
@@ -67,11 +67,18 @@ export async function ensureRazorpayPlan(
     .maybeSingle();
   if (cached?.razorpay_plan_id) return cached.razorpay_plan_id;
 
+  // Razorpay plans support period = daily | weekly | monthly | yearly.
+  // For quarterly (3 months) and half-yearly (6 months) we use
+  // period = "monthly" with interval = 3 or 6 respectively.
+  const rzpPeriod = params.cycle === "yearly" ? "yearly" : "monthly";
+  const rzpInterval =
+    params.cycle === "quarterly" ? 3 : params.cycle === "half_yearly" ? 6 : 1;
+
   const created = await call<{ id: string }>("/plans", {
     method: "POST",
     body: JSON.stringify({
-      period: params.cycle === "yearly" ? "yearly" : "monthly",
-      interval: 1,
+      period: rzpPeriod,
+      interval: rzpInterval,
       item: {
         name: params.name,
         amount: params.amountPaise,
@@ -105,14 +112,20 @@ export interface RazorpaySubscription {
  */
 export async function createSubscription(params: {
   planId: string;
-  cycle: "monthly" | "yearly";
+  cycle: "monthly" | "quarterly" | "half_yearly" | "yearly";
   notes: Record<string, string>;
 }): Promise<RazorpaySubscription> {
+  // Ten years' worth of cycles for each billing period.
+  const totalCount =
+    params.cycle === "yearly" ? 10 :
+    params.cycle === "half_yearly" ? 20 :
+    params.cycle === "quarterly" ? 40 : 120;
+
   return call<RazorpaySubscription>("/subscriptions", {
     method: "POST",
     body: JSON.stringify({
       plan_id: params.planId,
-      total_count: params.cycle === "yearly" ? 10 : 120,
+      total_count: totalCount,
       customer_notify: 1,
       notes: params.notes,
     }),
@@ -171,9 +184,13 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
 }
 
 /** End of the period a payment buys. */
-export function periodEnd(cycle: "monthly" | "yearly", from: Date = new Date()): Date {
+export function periodEnd(cycle: "monthly" | "quarterly" | "half_yearly" | "yearly", from: Date = new Date()): Date {
   const end = new Date(from);
-  if (cycle === "yearly") end.setUTCFullYear(end.getUTCFullYear() + 1);
-  else end.setUTCMonth(end.getUTCMonth() + 1);
+  switch (cycle) {
+    case "yearly": end.setUTCFullYear(end.getUTCFullYear() + 1); break;
+    case "half_yearly": end.setUTCMonth(end.getUTCMonth() + 6); break;
+    case "quarterly": end.setUTCMonth(end.getUTCMonth() + 3); break;
+    case "monthly": end.setUTCMonth(end.getUTCMonth() + 1); break;
+  }
   return end;
 }

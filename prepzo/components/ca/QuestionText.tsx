@@ -41,11 +41,57 @@ const QUESTION_MARKDOWN_COMPONENTS = {
   ),
 };
 
+/**
+ * Formats question text so that:
+ * 1. Sub-requirements such as (i), (ii), (iii) or (a), (b), (c) render on their own distinct lines.
+ * 2. Soft newlines in non-table content are preserved as markdown line-breaks.
+ */
+function formatQuestionText(text: string): string {
+  if (!text) return "";
+
+  let result = text;
+
+  // 1. Break before (i) / (a) / (1) if preceded by intro words (prepare, calculate, etc.)
+  result = result.replace(
+    /(\b(?:prepare|calculate|compute|determine|state|show|ascertain|following|required to)\b[^:\n(]*?)(?::)?\s*(\((?:[ivxlcdm]+|[a-eA-E]|\d{1,2})\)\s+)/gi,
+    "$1:\n\n$2"
+  );
+
+  // 2. Put subsequent inline sub-parts like ", (ii)", "; (ii)", "and (iii)" on new lines
+  result = result.replace(
+    /(?:,\s*|\s*;\s*|\s+and\s+)?(\((?:[ivxlcdm]+|[a-eA-E]|\d{1,2})\)\s+)/gi,
+    (match, label, offset) => {
+      if (offset === 0) return match;
+      const prev = result[offset - 1];
+      if (prev === "\n") return match;
+      return `\n\n${label}`;
+    }
+  );
+
+  // 3. Break before trailing general instructions following sub-parts
+  result = result.replace(
+    /(\((?:[ivxlcdm]+|[a-eA-E]|\d{1,2})\)[^\n]+?)\s+\b(in the books of|for the period of|assuming that|calculate the)\b/gi,
+    "$1\n\n$2"
+  );
+
+  // 4. Ensure soft newlines in non-table text are preserved in markdown
+  const lines = result.split("\n");
+  const processed = lines.map((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("|") || trimmed.length === 0) return line;
+    return `${line}  `;
+  });
+
+  return processed.join("\n");
+}
+
 export function QuestionText({ text, className }: { text: string; className?: string }) {
+  const formattedText = formatQuestionText(text);
+
   return (
     <div className={className}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={QUESTION_MARKDOWN_COMPONENTS}>
-        {text}
+        {formattedText}
       </ReactMarkdown>
     </div>
   );

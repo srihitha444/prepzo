@@ -62,7 +62,9 @@ export async function startCheckout(params: {
       // renewal terms and collects authorisation for future debits.
       subscription_id: order.subscription_id,
       name: "Prepzo",
-      description: `${order.plan_name} plan — renews ${params.cycle === "yearly" ? "yearly" : "monthly"}`,
+      description: `${order.plan_name} plan — renews every ${
+        params.cycle === "yearly" ? "year" : params.cycle === "half_yearly" ? "6 months" : params.cycle === "quarterly" ? "3 months" : "month"
+      }`,
       prefill: { email: params.userEmail, name: params.userName },
       theme: { color: "#1E3A8A" },
       handler: async (response: RazorpayResponse) => {

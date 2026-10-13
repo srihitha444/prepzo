@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature, periodEnd } from "@/lib/ca/razorpay";
+import type { BillingCycle } from "@/lib/ca/plans";
 
 /**
  * Razorpay webhook. With auto-renewing subscriptions this is not a backstop —
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
           subscription.current_period_end && new Date(subscription.current_period_end) > now
             ? new Date(subscription.current_period_end)
             : now;
-        const end = periodEnd(subscription.billing_cycle as "monthly" | "yearly", base);
+        const end = periodEnd(subscription.billing_cycle as BillingCycle, base);
 
         await service
           .from("ca_subscriptions")
