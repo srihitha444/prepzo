@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Bot, Send, ShieldCheck, User, FileText } from "lucide-react";
 import { useAiTeacherChat } from "@/hooks/useAiTeacherChat";
 
@@ -19,6 +20,16 @@ const MARKDOWN_COMPONENTS = {
     <code className="rounded bg-black/10 px-1 py-0.5 font-[family-name:var(--font-dm-mono)] text-xs">{children}</code>
   ),
   hr: () => <hr className="my-2 border-current/10" />,
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="mb-2 mt-1 overflow-x-auto last:mb-0">
+      <table className="w-full border-collapse text-xs">{children}</table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-[#EAF0FF]">{children}</thead>,
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="border border-[#CBD5E1] px-2 py-1.5 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => <td className="border border-[#CBD5E1] px-2 py-1.5">{children}</td>,
 };
 
 export function TutorChat({
@@ -38,7 +49,7 @@ export function TutorChat({
   initialSessionId?: string;
   onSessionCreated?: (sessionId: string) => void;
 }) {
-  const { messages, loadingHistory, sending, sendMessage } = useAiTeacherChat({
+  const { messages, loadingHistory, sending, error, sendMessage } = useAiTeacherChat({
     caLevel,
     currentTopic,
     recentAccuracy,
@@ -47,6 +58,11 @@ export function TutorChat({
     onSessionCreated,
   });
   const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, sending, error, loadingHistory]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +72,7 @@ export function TutorChat({
     try {
       await sendMessage(text);
     } catch (error) {
+      setInput(text);
       toast.error(error instanceof Error ? error.message : "Failed to send message");
     }
   }
@@ -100,7 +117,7 @@ export function TutorChat({
                 }`}
               >
                 {msg.role === "assistant" ? (
-                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{msg.content}</ReactMarkdown>
                 ) : (
                   msg.content
                 )}
@@ -125,6 +142,12 @@ export function TutorChat({
             </div>
           </div>
         )}
+        {error && (
+          <p role="alert" className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-xs text-[#B91C1C]">
+            {error} Your question is back in the input so you can try again.
+          </p>
+        )}
+        <div ref={bottomRef} />
       </div>
 
       <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-[#E2E8F0] p-3">

@@ -30,6 +30,7 @@ export function useAiTeacherChat({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(Boolean(initialSessionId));
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialSessionId) return;
@@ -50,6 +51,7 @@ export function useAiTeacherChat({
     if (!trimmed || sending) return;
 
     setSending(true);
+    setError(null);
     const optimisticUser: ChatMessage = { role: "user", content: trimmed, timestamp: new Date().toISOString() };
     setMessages((prev) => [...prev, optimisticUser]);
 
@@ -73,12 +75,13 @@ export function useAiTeacherChat({
       setSessionId(json.session_id);
       setMessages((prev) => [...prev, { role: "assistant", content: json.response, timestamp: new Date().toISOString() }]);
     } catch (error) {
-      setMessages((prev) => prev.slice(0, -1));
+      setMessages((prev) => prev.filter((message) => message !== optimisticUser));
+      setError(error instanceof Error ? error.message : "Failed to send message");
       throw error;
     } finally {
       setSending(false);
     }
   }
 
-  return { sessionId, messages, loadingHistory, sending, sendMessage };
+  return { sessionId, messages, loadingHistory, sending, error, sendMessage };
 }

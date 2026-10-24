@@ -16,6 +16,7 @@ interface RazorpayResponse {
   razorpay_payment_id: string;
   razorpay_signature: string;
 }
+interface RazorpayOrderResponse { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RazorpayConstructor = new (options: Record<string, any>) => { open: () => void };
@@ -36,10 +37,14 @@ function loadScript(): Promise<boolean> {
 export async function startCheckout(params: {
   plan: CaPlan;
   cycle: BillingCycle;
-  /** The student ticked the Terms box. The server verifies this too. */
-  acceptTerms: boolean;
+  /**
+   * Only for accounts with no acceptance on record from signup — the server
+   * checks the record first and requires this otherwise.
+   */
+  acceptTerms?: boolean;
   userEmail?: string;
   userName?: string;
+  referralCode?: string;
 }): Promise<{ plan: CaPlan }> {
   const ready = await loadScript();
   if (!ready) throw new Error("Couldn't load the payment window. Check your connection and try again.");
@@ -47,12 +52,20 @@ export async function startCheckout(params: {
   const orderRes = await fetch("/api/ca/billing/create-subscription", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan: params.plan, cycle: params.cycle, accept_terms: params.acceptTerms }),
+    body: JSON.stringify({ plan: params.plan, cycle: params.cycle, accept_terms: params.acceptTerms, referral_code: params.referralCode?.trim() }),
   });
   const order = await orderRes.json();
   if (!orderRes.ok) throw new Error(order.error || "Couldn't start checkout");
 
   const Razorpay = (window as unknown as { Razorpay: RazorpayConstructor }).Razorpay;
+
+  const verifySubscription = (response: RazorpayResponse) => fetch("/api/ca/billing/verify", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(response),
+  }).then(async (res) => {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "We couldn't confirm your payment");
+    return data;
+  });
 
   return new Promise((resolve, reject) => {
     const checkout = new Razorpay({
@@ -69,14 +82,31 @@ export async function startCheckout(params: {
       theme: { color: "#1E3A8A" },
       handler: async (response: RazorpayResponse) => {
         try {
-          const verifyRes = await fetch("/api/ca/billing/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
-          });
-          const verified = await verifyRes.json();
-          if (!verifyRes.ok) throw new Error(verified.error || "We couldn't confirm your payment");
-          resolve({ plan: verified.plan as CaPlan });
+          const verified = await verifySubscription(response);
+          if (order.order_id) {
+            const orderCheckout = new Razorpay({
+              key: order.key_id,
+              order_id: order.order_id,
+              name: "Prepzo",
+                description: `${order.plan_name} ${params.cycle} initial payment includes 10% off one month; renewals use regular price`,
+              prefill: { email: params.userEmail, name: params.userName },
+              theme: { color: "#1E3A8A" },
+              handler: async (payment: RazorpayOrderResponse) => {
+                try {
+                  const res = await fetch("/api/ca/billing/verify-referral-payment", {
+                    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payment),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "We couldn't confirm the discounted payment");
+                  resolve({ plan: data.plan as CaPlan });
+                } catch (error) { reject(error); }
+              },
+              modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
+            });
+            orderCheckout.open();
+          } else {
+            resolve({ plan: verified.plan as CaPlan });
+          }
         } catch (error) {
           // The money may well have been taken — the webhook is the backstop
           // that upgrades them regardless, so say so rather than implying the

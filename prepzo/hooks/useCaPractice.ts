@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchPrioritizedQuestions, recordAnswer } from "@/lib/questions";
 import type { Question } from "@/lib/supabase/types";
 import type { AnswerEvaluation } from "@/lib/ca/evaluateAnswer";
+import { submitAnswerForEvaluation, type AnswerImageRef, type AnswerSubmissionResponse } from "@/lib/ca/answerSubmission";
 
 export type { AnswerEvaluation as DescriptiveEvaluation } from "@/lib/ca/evaluateAnswer";
 
@@ -141,36 +142,50 @@ export function useCaPractice({ userId, subject, noteId, questionType, sessionLi
     ]);
   }
 
-  async function submitDescriptiveAnswer(studentAnswer: string) {
-    if (answered) return;
+  async function submitDescriptiveAnswer(
+    studentAnswer: string,
+    files: File[] = [],
+    confirmedAnswer?: string,
+    uploadedImages?: AnswerImageRef[]
+  ): Promise<{ result: AnswerSubmissionResponse; images: AnswerImageRef[] }> {
+    if (answered) throw new Error("This answer has already been submitted.");
     const question = questions[currentIndex];
-    if (!question || !studentAnswer.trim()) return;
+    if (!question || (!studentAnswer.trim() && files.length === 0 && !confirmedAnswer?.trim())) {
+      throw new Error("Write an answer or upload answer pages first.");
+    }
 
     setEvaluating(true);
     const timeSeconds = Math.max(0, Math.round((Date.now() - questionStartRef.current) / 1000));
 
     try {
-      const res = await fetch("/api/ca/questions/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question_id: question.id, student_answer: studentAnswer, time_taken_seconds: timeSeconds }),
+      const { result, images } = await submitAnswerForEvaluation({
+        questionId: question.id,
+        text: studentAnswer,
+        files,
+        uploadedImages,
+        confirmedAnswer,
+        timeTakenSeconds: timeSeconds,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Evaluation failed");
+      if (result.needs_review) return { result, images };
+      if (typeof result.marks_awarded !== "number" || typeof result.percentage !== "number") {
+        throw new Error("The answer could not be graded.");
+      }
 
-      setEvaluation(json as AnswerEvaluation);
+      const evaluation = result as AnswerEvaluation;
+      setEvaluation(evaluation);
       setAnswered(true);
       setAnswers((prev) => [
         ...prev,
         {
           questionId: question.id,
-          correct: json.percentage >= 50,
+          correct: evaluation.percentage >= 50,
           attempted: true,
           negativeMarkingValue: 0,
           selectedOption: null,
-          evaluation: json as AnswerEvaluation,
+          evaluation,
         },
       ]);
+      return { result, images };
     } finally {
       setEvaluating(false);
     }

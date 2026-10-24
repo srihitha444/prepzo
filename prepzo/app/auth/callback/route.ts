@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { TERMS_VERSION } from "@/lib/ca/plans";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,6 +34,14 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
+      // "Continue with Google" on the signup page only starts once the terms
+      // box is ticked, and says so here; email signups record it in signUp().
+      const acceptedTerms = searchParams.get("terms");
+      if (user && acceptedTerms === TERMS_VERSION && user.user_metadata?.terms_version !== TERMS_VERSION) {
+        await supabase.auth.updateUser({
+          data: { terms_version: TERMS_VERSION, terms_accepted_at: new Date().toISOString() },
+        });
+      }
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")

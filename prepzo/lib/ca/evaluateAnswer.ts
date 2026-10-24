@@ -2,6 +2,8 @@ import { generateForTask } from "@/lib/gemini";
 import type { Question } from "@/lib/supabase/types";
 
 export interface AnswerEvaluation {
+  extracted_answer?: string;
+  answer_image_urls?: string[];
   marks_awarded: number;
   marks_total: number;
   percentage: number;
@@ -12,7 +14,14 @@ export interface AnswerEvaluation {
   encouragement: string;
 }
 
+export interface AnswerImageReview {
+  needs_review: true;
+  extracted_answer: string;
+}
+
 interface RawEvaluation {
+  needs_review?: boolean;
+  extracted_answer?: string;
   marks_awarded?: number;
   marks_total?: number;
   percentage?: number;
@@ -24,7 +33,7 @@ interface RawEvaluation {
 }
 
 // Prompt template from docs/ca-platform/06_ANSWER_EVALUATION.md.
-function buildPrompt(question: Question, studentAnswer: string): string {
+function buildPrompt(question: Question, studentAnswer: string, hasImages: boolean): string {
   const markAllocation = question.mark_allocation
     ? JSON.stringify(question.mark_allocation)
     : "(none provided — allocate the question's total marks across the key points a correct answer should cover, using your own judgement.)";
@@ -41,7 +50,15 @@ MARK ALLOCATION:
 ${markAllocation}
 
 STUDENT'S ANSWER:
-${studentAnswer}
+${studentAnswer || (hasImages ? "(The student's handwritten answer is attached as page images.)" : "")}
+
+${hasImages ? `IMAGE HANDLING:
+- Read the student's handwritten answer from the attached page images in order.
+- Transcribe the complete answer, preserving figures, Dr/Cr labels, workings, and table rows/columns.
+- Set needs_review=true and return only extracted_answer (no marks) if any material part is blurry, cropped, missing, or ambiguous enough that grading could be unfair. Include [unclear] where needed.
+- If the answer is legible, set needs_review=false and grade the answer from both the images and your transcription.
+- Do not mark a legible answer for review merely because handwriting is handwritten.
+` : ""}
 
 Evaluate the student's answer by:
 1. Awarding marks for each correct point from the mark allocation
@@ -61,7 +78,7 @@ RULES:
 
 Return strict JSON only, matching this shape:
 {
-  "marks_awarded": number,
+  ${hasImages ? '"needs_review": boolean,\n  "extracted_answer": "complete transcription of the answer",\n  ' : ""}"marks_awarded": number,
   "marks_total": number,
   "percentage": number,
   "what_was_correct": ["point 1", "point 2"],
@@ -78,8 +95,16 @@ function clampPercentage(marksAwarded: number, marksTotal: number, given?: numbe
   return Math.round((marksAwarded / marksTotal) * 100);
 }
 
-export async function evaluateDescriptiveAnswer(question: Question, studentAnswer: string): Promise<AnswerEvaluation> {
-  const result = await generateForTask("evaluation", buildPrompt(question, studentAnswer), { json: true });
+export async function evaluateDescriptiveAnswer(
+  question: Question,
+  studentAnswer: string,
+  images: { data: string; mimeType: string }[] = []
+): Promise<AnswerEvaluation | AnswerImageReview> {
+  const prompt = buildPrompt(question, studentAnswer, images.length > 0);
+  const request = images.length
+    ? [...images.map(({ data, mimeType }) => ({ inlineData: { data, mimeType } })), { text: prompt }]
+    : prompt;
+  const result = await generateForTask("evaluation", request, { json: true });
   const text = result.response.text();
 
   let parsed: RawEvaluation;
@@ -89,10 +114,18 @@ export async function evaluateDescriptiveAnswer(question: Question, studentAnswe
     throw new Error("Gemini returned non-JSON content during answer evaluation");
   }
 
+  if (images.length > 0 && parsed.needs_review) {
+    return {
+      needs_review: true,
+      extracted_answer: parsed.extracted_answer?.trim() || "[unclear handwriting — please type your answer]",
+    };
+  }
+
   const marksTotal = parsed.marks_total ?? question.marks ?? 0;
   const marksAwarded = Math.max(0, Math.min(marksTotal, Math.round(parsed.marks_awarded ?? 0)));
 
   return {
+    ...(images.length > 0 && parsed.extracted_answer ? { extracted_answer: parsed.extracted_answer } : {}),
     marks_awarded: marksAwarded,
     marks_total: marksTotal,
     percentage: clampPercentage(marksAwarded, marksTotal, parsed.percentage),

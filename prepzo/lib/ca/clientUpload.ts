@@ -113,7 +113,7 @@ async function compressImageIfWorthwhile(file: File): Promise<File> {
 export async function uploadFileToStorage(params: {
   file: File;
   bucket: string;
-}): Promise<{ filePath: string; mimeType: string; pageCount: number; fileHash: string | null }> {
+}): Promise<{ filePath: string; mimeType: string; pageCount: number; fileHash: string | null; fileSize: number }> {
   const { bucket } = params;
   let file = params.file;
   const validationError = validateUploadFile(file);
@@ -156,7 +156,7 @@ export async function uploadFileToStorage(params: {
   });
   if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-  return { filePath, mimeType: file.type, pageCount, fileHash };
+  return { filePath, mimeType: file.type, pageCount, fileHash, fileSize: file.size };
 }
 
 // sha256 of the exact bytes being uploaded — the shared-derivation cache

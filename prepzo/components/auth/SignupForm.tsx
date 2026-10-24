@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { TERMS_VERSION } from "@/lib/ca/plans";
 
 interface SignupFormProps {
   brandName?: string;
@@ -25,6 +26,9 @@ function SignupFormContent({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  // Unticked by default and required for both email and Google signup — it is
+  // the acceptance checkout relies on, so it has to be a real choice.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   // Prefer the actual page origin over the static env var: the OAuth/email
   // redirect must land back on whichever origin initiated the flow (prod,
   // preview or localhost), or the PKCE verifier stored in that origin's
@@ -39,6 +43,10 @@ function SignupFormContent({
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !email || !password) return;
+    if (!acceptedTerms) {
+      toast.error("Please accept the Terms and Conditions and Privacy Policy first.");
+      return;
+    }
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
@@ -49,7 +57,7 @@ function SignupFormContent({
       email,
       password,
       options: {
-        data: { full_name: name },
+        data: { full_name: name, terms_version: TERMS_VERSION, terms_accepted_at: new Date().toISOString() },
         emailRedirectTo: `${appUrl}${callbackPath}?next=${encodeURIComponent(redirectTo || "/dashboard")}`,
       },
     });
@@ -75,13 +83,17 @@ function SignupFormContent({
   }
 
   async function handleGoogleSignup() {
+    if (!acceptedTerms) {
+      toast.error("Please accept the Terms and Conditions and Privacy Policy first.");
+      return;
+    }
     setGoogleLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         flowType: "pkce",
-        redirectTo: `${appUrl}${callbackPath}?next=${encodeURIComponent(redirectTo || "/dashboard")}`,
+        redirectTo: `${appUrl}${callbackPath}?next=${encodeURIComponent(redirectTo || "/dashboard")}&terms=${TERMS_VERSION}`,
       },
     });
     if (error) {
@@ -103,9 +115,31 @@ function SignupFormContent({
         </div>
 
         <div className="bg-white rounded-[14px] shadow-[var(--shadow-card)] p-8 border border-[#E2E8F0]">
+          {/* Above both sign-up options, so it gates "Continue with Google" too. */}
+          <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] px-4 py-3">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#1E3A8A]"
+            />
+            <span className="text-xs leading-relaxed text-[#475569]">
+              I accept the{" "}
+              <Link href="/terms" target="_blank" className="font-semibold text-[#1E3A8A] underline">
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy-policy" target="_blank" className="font-semibold text-[#1E3A8A] underline">
+                Privacy Policy
+              </Link>
+              . My account is for my personal use and cannot be shared, I may only upload study material I am
+              permitted to use, and any paid plan I choose renews automatically until I cancel.
+            </span>
+          </label>
+
           <button
             onClick={handleGoogleSignup}
-            disabled={googleLoading}
+            disabled={googleLoading || !acceptedTerms}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#E2E8F0] bg-white hover:bg-[#F8FAFF] text-[#0F172A] font-medium text-sm transition-all disabled:opacity-60"
           >
             <GoogleIcon />
@@ -172,15 +206,12 @@ function SignupFormContent({
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               className="w-full py-3 px-4 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white font-semibold text-sm transition-all disabled:opacity-60 active:scale-[0.98] min-h-[44px]"
             >
               {loading ? "Creating account..." : "Start Free"}
             </button>
 
-            <p className="text-xs text-[#64748B] text-center">
-              By signing up, you agree to our <Link href="/terms" className="text-[#1E3A8A] font-semibold hover:underline">Terms</Link> and <Link href="/privacy-policy" className="text-[#1E3A8A] font-semibold hover:underline">Privacy Policy</Link>.
-            </p>
           </form>
         </div>
 

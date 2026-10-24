@@ -1841,32 +1841,72 @@ a, button, [role="button"] {
   background-size: 24px 24px;
 }
 
-[data-theme="dark"] .landing-page .landing-hero-copy h1 {
-  color: #0f172a !important;
+/* ── Landing page ─────────────────────────────────────────────
+   The landing page is always light. The app-wide dark-mode rules above
+   repaint utility classes by name, which turned the marketing page into a
+   half-dark patchwork; these re-assert the light values inside `.lp` only
+   (more specific selector, so they win over the global !important ones). */
+.lp { color-scheme: light; background: #ffffff; color: #0f172a; }
+[data-theme="dark"] .lp,
+[data-theme="dark"] .lp .min-h-screen { background: #ffffff !important; }
+[data-theme="dark"] .lp header { background: transparent !important; border-color: transparent !important; }
+[data-theme="dark"] .lp header[data-scrolled="true"] { background: rgba(255, 255, 255, 0.8) !important; }
+[data-theme="dark"] .lp .bg-white { background: #ffffff !important; }
+[data-theme="dark"] .lp .bg-\[\#F8FAFF\] { background: #f8faff !important; }
+[data-theme="dark"] .lp .bg-\[\#F1F5F9\] { background: #f1f5f9 !important; }
+[data-theme="dark"] .lp .bg-\[\#DBEAFE\] { background: #dbeafe !important; }
+[data-theme="dark"] .lp .bg-\[\#FEF3C7\] { background: #fef3c7 !important; }
+[data-theme="dark"] .lp .bg-\[\#DCFCE7\] { background: #dcfce7 !important; }
+[data-theme="dark"] .lp .border-\[\#E2E8F0\] { border-color: #e2e8f0 !important; }
+[data-theme="dark"] .lp .border-\[\#BFDBFE\] { border-color: #bfdbfe !important; }
+[data-theme="dark"] .lp .text-\[\#0F172A\] { color: #0f172a !important; }
+[data-theme="dark"] .lp .text-\[\#334155\] { color: #334155 !important; }
+[data-theme="dark"] .lp .text-\[\#64748B\] { color: #64748b !important; }
+[data-theme="dark"] .lp .text-\[\#94A3B8\] { color: #94a3b8 !important; }
+[data-theme="dark"] .lp .text-\[\#1E3A8A\] { color: #1e3a8a !important; }
+[data-theme="dark"] .lp .hover\:bg-\[\#F8FAFF\]:hover { background: #f8faff !important; }
+
+/* Highlighter-pen stroke behind a phrase, in the brand's light blue. */
+.lp-marker {
+  background-image: linear-gradient(transparent 58%, #bfdbfe 58%, #bfdbfe 90%, transparent 90%);
+  padding: 0 0.12em;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
-[data-theme="dark"] .landing-page .landing-hero-copy h1 span {
-  color: #1e3a8a !important;
+/* Scroll reveal (see components/landing/Reveal.tsx). */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.lp-reveal-in { opacity: 1; transform: none; }
 
-[data-theme="dark"] .landing-page .landing-hero-copy p {
-  color: #334155 !important;
+/* Dot travelling along the hero's "file → practice" connector. */
+@keyframes lp-travel {
+  0% { top: 0; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: calc(100% - 6px); opacity: 0; }
 }
+.lp-travel { animation: lp-travel 1.8s ease-in-out infinite; }
 
-[data-theme="dark"] .landing-page .landing-footer {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
+@keyframes lp-swap-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
 }
+.lp-swap-in { animation: lp-swap-in 450ms cubic-bezier(0.16, 1, 0.3, 1); }
 
-[data-theme="dark"] .landing-page .landing-footer span,
-[data-theme="dark"] .landing-page .landing-footer p,
-[data-theme="dark"] .landing-page .landing-footer a {
-  color: #334155 !important;
+@keyframes lp-wiggle {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
 }
+.lp-wiggle:hover { animation: lp-wiggle 400ms ease-in-out 2; }
 
-[data-theme="dark"] .landing-page .landing-footer .font-\[family-name\:var\(--font-fraunces\)\],
-[data-theme="dark"] .landing-page .landing-footer .font-semibold {
-  color: #0f172a !important;
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal { opacity: 1; transform: none; transition: none; }
+  .lp-travel, .lp-swap-in, .lp-wiggle:hover { animation: none; }
 }
 
 [data-theme="dark"] .legal-document-page .legal-document-card {

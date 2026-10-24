@@ -7,17 +7,27 @@ import { createHmac, timingSafeEqual } from "crypto";
  * actually need — creating an order and verifying a signature — are one fetch
  * and one HMAC. Re-adding a dependency to wrap that isn't worth it.
  *
- * Env: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, and
- * NEXT_PUBLIC_RAZORPAY_KEY_ID for the browser checkout.
+ * Env: RAZORPAY_KEY_ID (also returned to the browser for checkout),
+ * RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET.
  */
 
 const API = "https://api.razorpay.com/v1";
 
 function credentials(): { keyId: string; keySecret: string } {
-  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keyId = razorpayKeyId();
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) throw new Error("Razorpay is not configured (missing RAZORPAY_KEY_ID/RAZORPAY_KEY_SECRET)");
   return { keyId, keySecret };
+}
+
+/**
+ * The key id the server uses AND hands to the browser in the checkout
+ * response, so the two can never disagree. The browser never reads an env var
+ * itself, which is why no NEXT_PUBLIC_ copy is needed; the old one is only a
+ * fallback for environments that still have nothing else.
+ */
+export function razorpayKeyId(): string | undefined {
+  return process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
@@ -113,6 +123,7 @@ export interface RazorpaySubscription {
 export async function createSubscription(params: {
   planId: string;
   cycle: "monthly" | "quarterly" | "half_yearly" | "yearly";
+  startAt?: Date;
   notes: Record<string, string>;
 }): Promise<RazorpaySubscription> {
   // Ten years' worth of cycles for each billing period.
@@ -127,8 +138,18 @@ export async function createSubscription(params: {
       plan_id: params.planId,
       total_count: totalCount,
       customer_notify: 1,
+      ...(params.startAt ? { start_at: Math.floor(params.startAt.getTime() / 1000) } : {}),
       notes: params.notes,
     }),
+  });
+}
+
+export interface RazorpayOrder { id: string; amount: number; currency: string }
+
+export async function createOrder(params: { amountPaise: number; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder> {
+  return call<RazorpayOrder>("/orders", {
+    method: "POST",
+    body: JSON.stringify({ amount: params.amountPaise, currency: "INR", receipt: params.receipt, notes: params.notes }),
   });
 }
 
@@ -172,6 +193,12 @@ export function verifySubscriptionSignature(params: {
   const expected = createHmac("sha256", keySecret)
     .update(`${params.paymentId}|${params.subscriptionId}`)
     .digest("hex");
+  return safeEqual(expected, params.signature);
+}
+
+export function verifyOrderSignature(params: { orderId: string; paymentId: string; signature: string }): boolean {
+  const { keySecret } = credentials();
+  const expected = createHmac("sha256", keySecret).update(`${params.orderId}|${params.paymentId}`).digest("hex");
   return safeEqual(expected, params.signature);
 }
 

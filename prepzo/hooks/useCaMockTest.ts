@@ -6,6 +6,7 @@ import { fetchQuestions, recordAnswer } from "@/lib/questions";
 import type { CaPaper } from "@/lib/ca-syllabus";
 import type { Question } from "@/lib/supabase/types";
 import type { AnswerEvaluation } from "@/lib/ca/evaluateAnswer";
+import { submitAnswerForEvaluation, type AnswerImageRef, type AnswerSubmissionResponse } from "@/lib/ca/answerSubmission";
 
 const MCQ_POOL_LIMIT = 20;
 const DESCRIPTIVE_POOL_LIMIT = 10;
@@ -21,6 +22,7 @@ interface McqAnswerState {
 
 interface DescriptiveAnswerState {
   text: string;
+  images: AnswerImageRef[];
   evaluation: AnswerEvaluation | null;
   evaluating: boolean;
 }
@@ -132,22 +134,71 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
     }
   }
 
-  async function submitDescriptive(question: Question, text: string) {
-    if (!text.trim()) return;
-    setDescriptiveAnswers((prev) => ({ ...prev, [question.id]: { text, evaluation: null, evaluating: true } }));
+  async function submitDescriptive(
+    question: Question,
+    text: string,
+    files: File[] = [],
+    confirmedAnswer?: string,
+    uploadedImages?: AnswerImageRef[]
+  ): Promise<{ result: AnswerSubmissionResponse; images: AnswerImageRef[] }> {
+    if (!text.trim() && files.length === 0 && !confirmedAnswer?.trim()) {
+      throw new Error("Write an answer or upload answer pages first.");
+    }
+    setDescriptiveAnswers((prev) => ({
+      ...prev,
+      [question.id]: {
+        text: prev[question.id]?.text || text,
+        images: prev[question.id]?.images || uploadedImages || [],
+        evaluation: null,
+        evaluating: true,
+      },
+    }));
 
     try {
-      const res = await fetch("/api/ca/questions/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question_id: question.id, student_answer: text }),
+      const { result, images } = await submitAnswerForEvaluation({
+        questionId: question.id,
+        text,
+        files,
+        uploadedImages,
+        confirmedAnswer,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Evaluation failed");
+      if (result.needs_review) {
+        setDescriptiveAnswers((prev) => ({
+          ...prev,
+          [question.id]: {
+            text: result.extracted_answer || "",
+            images,
+            evaluation: null,
+            evaluating: false,
+          },
+        }));
+        return { result, images };
+      }
+      if (typeof result.marks_awarded !== "number" || typeof result.percentage !== "number") {
+        throw new Error("The answer could not be graded.");
+      }
 
-      setDescriptiveAnswers((prev) => ({ ...prev, [question.id]: { text, evaluation: json, evaluating: false } }));
+      const evaluation = result as AnswerEvaluation;
+      setDescriptiveAnswers((prev) => ({
+        ...prev,
+        [question.id]: {
+          text: confirmedAnswer?.trim() || text || evaluation.extracted_answer || "",
+          images,
+          evaluation,
+          evaluating: false,
+        },
+      }));
+      return { result, images };
     } catch (error) {
-      setDescriptiveAnswers((prev) => ({ ...prev, [question.id]: { text, evaluation: null, evaluating: false } }));
+      setDescriptiveAnswers((prev) => ({
+        ...prev,
+        [question.id]: {
+          text: prev[question.id]?.text || text,
+          images: prev[question.id]?.images || uploadedImages || [],
+          evaluation: null,
+          evaluating: false,
+        },
+      }));
       throw error;
     }
   }
@@ -199,7 +250,10 @@ export function useCaMockTest({ userId, paper, testPaperId }: { userId: string; 
           body: JSON.stringify({
             attempt_id: attemptIdRef.current,
             mcq_answers: Object.fromEntries(Object.entries(mcqAnswers).map(([id, a]) => [id, a.selected])),
-            descriptive_answers: Object.fromEntries(Object.entries(descriptiveAnswers).map(([id, a]) => [id, a.text])),
+            descriptive_answers: Object.fromEntries(Object.entries(descriptiveAnswers).map(([id, a]) => [
+              id,
+              { text: a.text, answer_images: a.images.map((image) => image.path), evaluation: a.evaluation },
+            ])),
             mcq_score: Math.round(mcqScore * 100) / 100,
             descriptive_score: descriptiveScore,
             total_score: totalScore,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import {
@@ -36,23 +36,23 @@ export function PricingTable({
   subscription,
   userEmail,
   userName,
-  hideTerms = false,
+  linkToPricing = false,
+  needsTerms = false,
 }: {
   signedIn?: boolean;
   currentPlan?: CaPlan;
   subscription?: ActiveSubscription | null;
   userEmail?: string;
   userName?: string;
-  hideTerms?: boolean;
+  /** Landing page: paid buttons go to /pricing instead of opening checkout. */
+  linkToPricing?: boolean;
+  /** Terms are accepted at signup; only accounts with nothing on record are asked at checkout. */
+  needsTerms?: boolean;
 }) {
   const router = useRouter();
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const [busy, setBusy] = useState<CaPlan | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<CaPlan | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  // Unticked by default and required before checkout opens. Pre-ticking it
-  // would not be acceptance of an auto-renewing charge in any meaningful
-  // sense, and the server rejects the request without it regardless.
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function cancel() {
     setCancelling(true);
@@ -66,26 +66,6 @@ export function PricingTable({
       toast.error(error instanceof Error ? error.message : "Could not cancel");
     } finally {
       setCancelling(false);
-    }
-  }
-
-  async function buy(plan: CaPlan) {
-    if (!acceptedTerms) {
-      toast.error("Please accept the Terms and Conditions and Privacy Policy first.");
-      return;
-    }
-    setBusy(plan);
-    try {
-      await startCheckout({ plan, cycle, acceptTerms: acceptedTerms, userEmail, userName });
-      toast.success(`You're on ${CA_PLANS[plan].name} now.`);
-      router.refresh();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Checkout failed";
-      // Dismissing the Razorpay modal isn't an error worth shouting about.
-      if (message === "Payment cancelled") toast(message);
-      else toast.error(message);
-    } finally {
-      setBusy(null);
     }
   }
 
@@ -139,30 +119,6 @@ export function PricingTable({
           ))}
         </div>
       </div>
-
-      {signedIn && !hideTerms && (
-      <label className="mx-auto mb-6 flex max-w-2xl cursor-pointer items-start gap-3 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3">
-        <input
-          type="checkbox"
-          checked={acceptedTerms}
-          onChange={(e) => setAcceptedTerms(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[#1E3A8A]"
-        />
-        <span className="text-xs leading-relaxed text-[#475569]">
-          I have read and accept the{" "}
-          <Link href="/terms" target="_blank" className="font-semibold text-[#1E3A8A] underline">
-            Terms and Conditions
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy-policy" target="_blank" className="font-semibold text-[#1E3A8A] underline">
-            Privacy Policy
-          </Link>
-          . I understand my plan renews automatically until I cancel, that my account is for my
-          personal use and cannot be shared, and that I may only upload study material I am
-          permitted to use.
-        </span>
-      </label>
-      )}
 
       <div className="grid gap-5 md:grid-cols-3">
         {CA_PLAN_ORDER.map((id) => {
@@ -243,7 +199,7 @@ export function PricingTable({
                   <div className="rounded-xl border border-[#E2E8F0] py-3 text-center text-sm font-semibold text-[#64748B]">
                     Free forever
                   </div>
-                ) : hideTerms ? (
+                ) : linkToPricing ? (
                   <Link
                     href="/pricing"
                     className="flex w-full items-center justify-center rounded-xl bg-[#1E3A8A] py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
@@ -252,12 +208,10 @@ export function PricingTable({
                   </Link>
                 ) : (
                   <button
-                    onClick={() => buy(id)}
-                    disabled={busy !== null || !acceptedTerms}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1E3A8A] py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B] disabled:opacity-50"
+                    onClick={() => setCheckoutPlan(id)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1E3A8A] py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B]"
                   >
-                    {busy === id && <Loader2 size={15} className="animate-spin" />}
-                    {busy === id ? "Opening checkout..." : `Get ${plan.name}`}
+                    Get {plan.name}
                   </button>
                 )}
               </div>
@@ -266,10 +220,210 @@ export function PricingTable({
         })}
       </div>
 
+      {checkoutPlan && (
+        <CheckoutDialog
+          plan={checkoutPlan}
+          cycle={cycle}
+          needsTerms={needsTerms}
+          userEmail={userEmail}
+          userName={userName}
+          onClose={() => setCheckoutPlan(null)}
+          onPaid={() => {
+            setCheckoutPlan(null);
+            router.refresh();
+          }}
+        />
+      )}
+
       <p className="mt-6 text-center text-xs text-[#64748B]">
         Prices in INR, inclusive of applicable taxes. Plans renew automatically each billing cycle until
         you cancel. You can cancel any time and keep your plan until the period you&apos;ve paid for ends.
       </p>
+    </div>
+  );
+}
+
+/**
+ * The step between "Get Pro" and Razorpay: what you're buying, an optional
+ * referral code (checked against the server so the total shown is the total
+ * charged), and — only for accounts that never accepted at signup — the terms.
+ */
+function CheckoutDialog({
+  plan,
+  cycle,
+  needsTerms,
+  userEmail,
+  userName,
+  onClose,
+  onPaid,
+}: {
+  plan: CaPlan;
+  cycle: BillingCycle;
+  needsTerms: boolean;
+  userEmail?: string;
+  userName?: string;
+  onClose: () => void;
+  onPaid: () => void;
+}) {
+  const definition = CA_PLANS[plan];
+  const fullPrice = priceFor(definition, cycle) ?? definition.monthlyPrice;
+  const [codeInput, setCodeInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discount: number; total: number } | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+  // Unticked by default. Pre-ticking it would not be acceptance of an
+  // auto-renewing charge in any meaningful sense.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [paying, setPaying] = useState(false);
+
+  async function applyCode() {
+    setCheckingCode(true);
+    setCodeError(null);
+    try {
+      const res = await fetch("/api/ca/billing/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codeInput, plan, cycle }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not check that code");
+      setApplied({ code: codeInput, discount: json.discount_amount / 100, total: json.amount / 100 });
+    } catch (error) {
+      setApplied(null);
+      setCodeError(error instanceof Error ? error.message : "Could not check that code");
+    } finally {
+      setCheckingCode(false);
+    }
+  }
+
+  async function pay() {
+    setPaying(true);
+    try {
+      await startCheckout({
+        plan,
+        cycle,
+        acceptTerms: needsTerms ? acceptedTerms : undefined,
+        userEmail,
+        userName,
+        referralCode: applied?.code,
+      });
+      toast.success(`You're on ${definition.name} now.`);
+      onPaid();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Checkout failed";
+      // Dismissing the Razorpay modal isn't an error worth shouting about.
+      if (message === "Payment cancelled") toast(message);
+      else toast.error(message);
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  const total = applied ? applied.total : fullPrice;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 p-4"
+      onClick={paying ? undefined : onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Checkout: ${definition.name}`}
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[#0F172A]">{definition.name}</h3>
+            <p className="text-xs text-[#64748B]">Billed {cycleLabel(cycle).toLowerCase()}</p>
+          </div>
+          <button onClick={onClose} disabled={paying} aria-label="Close" className="text-[#64748B] hover:text-[#0F172A]">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-5">
+          <label htmlFor="referral-code" className="mb-1 block text-sm font-medium text-[#334155]">
+            Referral code <span className="font-normal text-[#64748B]">(optional)</span>
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="referral-code"
+              value={codeInput}
+              onChange={(event) => {
+                setCodeInput(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5));
+                setApplied(null);
+                setCodeError(null);
+              }}
+              placeholder="3–5 letters"
+              maxLength={5}
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-xl border border-[#CBD5E1] px-3 py-2.5 text-sm uppercase outline-none focus:border-[#1E3A8A]"
+            />
+            <button
+              onClick={applyCode}
+              disabled={codeInput.length < 3 || checkingCode || Boolean(applied)}
+              className="rounded-xl border border-[#CBD5E1] px-4 text-sm font-semibold text-[#1E3A8A] disabled:opacity-50"
+            >
+              {checkingCode ? "Checking..." : applied ? "Applied" : "Apply"}
+            </button>
+          </div>
+          {codeError && <p className="mt-1 text-xs text-[#DC2626]">{codeError}</p>}
+        </div>
+
+        <dl className="mt-5 space-y-1.5 border-t border-[#E2E8F0] pt-4 text-sm">
+          <div className="flex justify-between text-[#475569]">
+            <dt>{definition.name}, {cycleLabel(cycle)}</dt>
+            <dd>{formatPrice(fullPrice)}</dd>
+          </div>
+          {applied && (
+            <div className="flex justify-between text-[#15803D]">
+              <dt>Referral {applied.code} (first payment only)</dt>
+              <dd>−{formatPrice(applied.discount)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold text-[#0F172A]">
+            <dt>Due today</dt>
+            <dd>{formatPrice(total)}</dd>
+          </div>
+        </dl>
+        <p className="mt-2 text-xs text-[#64748B]">
+          Renews automatically at {formatPrice(fullPrice)}
+          {cycleSuffix(cycle)} until you cancel. You can cancel any time from this page.
+        </p>
+
+        {needsTerms && (
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#E2E8F0] px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#1E3A8A]"
+            />
+            <span className="text-xs leading-relaxed text-[#475569]">
+              I accept the{" "}
+              <Link href="/terms" target="_blank" className="font-semibold text-[#1E3A8A] underline">
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy-policy" target="_blank" className="font-semibold text-[#1E3A8A] underline">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+        )}
+
+        <button
+          onClick={pay}
+          disabled={paying || (needsTerms && !acceptedTerms)}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#1E3A8A] py-3 text-sm font-semibold text-white transition-all hover:bg-[#162D6B] disabled:opacity-50"
+        >
+          {paying && <Loader2 size={15} className="animate-spin" />}
+          {paying ? "Opening payment..." : `Pay ${formatPrice(total)}`}
+        </button>
+      </div>
     </div>
   );
 }

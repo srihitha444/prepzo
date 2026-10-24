@@ -47,6 +47,10 @@ ADMIN_EMAILS=admin@yoursite.com
 3. In **Authentication > Settings**, enable **Email/Password** and **Google** OAuth
 4. For Google OAuth, add `<your-vercel-url>/auth/callback` as a redirect URL
 
+### CA descriptive answer image uploads
+
+Before deploying the CA answer-photo feature, run `supabase/ca-answer-images.sql` in the production project's **SQL Editor**. This creates the private answer-image bucket, owner-only storage policies, and the `question_attempts.answer_images` column. The migration is also included in `supabase/ca-all-pending-migrations.sql`.
+
 ### 4. Seed the Database
 
 ```bash
@@ -164,9 +168,9 @@ prepzo/
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (public) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (secret) |
-| `RAZORPAY_KEY_ID` | Razorpay key ID (secret, server-only) |
+| `RAZORPAY_KEY_ID` | Razorpay key ID (server; returned to the browser for checkout) |
 | `RAZORPAY_KEY_SECRET` | Razorpay secret (secret) |
-| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay key ID (public, for checkout) |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Not needed; fallback only if `RAZORPAY_KEY_ID` is unset |
 | `ADMIN_EMAILS` | Comma-separated admin email addresses |
 
 ---

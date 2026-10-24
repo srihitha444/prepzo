@@ -2,47 +2,49 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  Check,
-  ChevronRight,
-  ClipboardCheck,
-  FileText,
-  Layers,
-  MessageCircle,
-  NotebookPen,
-  PenLine,
-  Repeat2,
-  Sparkles,
-  Upload,
-  X,
-} from "lucide-react";
+import { ArrowDown, ArrowRight, Check, FileText, MessageCircle, NotebookPen, PenLine, Plus, Sparkles } from "lucide-react";
 import { PricingTable } from "@/components/ca/PricingTable";
+import { Reveal } from "@/components/landing/Reveal";
+import {
+  CheatsheetSample,
+  DescriptiveSample,
+  HeroOutput,
+  McqSample,
+  RealPaperSample,
+  RecallSample,
+  TutorSample,
+} from "@/components/landing/samples";
 import { createClient } from "@/lib/supabase/client";
+import { CA_SYLLABUS, formatLabel, type CaLevel } from "@/lib/ca-syllabus";
 import type { CaPlan } from "@/lib/ca/plans";
 
 /**
- * Every sample rendered on this page is a faithful mock-up of output the
- * product genuinely produces, in the shape it genuinely produces it — the
- * grading sample mirrors AnswerEvaluation's marks/what_was_correct/
- * what_was_missed, the MCQs are real four-option questions with negative
- * marking. It is product demonstration, not social proof: there are
- * deliberately no user counts, testimonials, ratings or outcome claims
- * anywhere here, and none should be added until real data backs them.
+ * Landing page. Every claim here is something the product does today — see
+ * the inventory behind components/landing/samples.tsx. There are deliberately
+ * no testimonials, user counts, ratings, logos or outcome claims: add them
+ * only when real ones exist. Paper formats are read from CA_SYLLABUS, the
+ * same data question generation uses, so the page can't drift from the app.
  */
 
-type TabKey = "descriptive" | "practice" | "tutor" | "cheatsheet";
+const display = "font-[family-name:var(--font-fraunces)]";
+const mono = "font-[family-name:var(--font-dm-mono)]";
+
+type TabKey = "mcq" | "descriptive" | "tutor" | "cheatsheet";
 
 const TABS: { key: TabKey; label: string; icon: typeof PenLine }[] = [
-  { key: "descriptive", label: "Descriptive Grading", icon: PenLine },
-  { key: "practice", label: "Exam MCQs", icon: Sparkles },
-  { key: "tutor", label: "AI Tutor", icon: MessageCircle },
-  { key: "cheatsheet", label: "Quick Cheatsheets", icon: NotebookPen },
+  { key: "mcq", label: "MCQs", icon: Sparkles },
+  { key: "descriptive", label: "Answer marking", icon: PenLine },
+  { key: "tutor", label: "AI Teacher", icon: MessageCircle },
+  { key: "cheatsheet", label: "Cheatsheets", icon: NotebookPen },
 ];
 
+const HERO_CYCLE = ["descriptive", "mcq", "flashcard"] as const;
+
 export default function CaLandingPage() {
-  const [tab, setTab] = useState<TabKey>("descriptive");
-  const [activeLevel, setActiveLevel] = useState<string>("Intermediate");
+  const [tab, setTab] = useState<TabKey>("mcq");
+  const [level, setLevel] = useState<CaLevel>("Intermediate");
+  const [heroStep, setHeroStep] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<CaPlan>("free");
   const [userEmail, setUserEmail] = useState<string | undefined>();
@@ -51,406 +53,473 @@ export default function CaLandingPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("code") || params.has("error")) {
-      const callbackUrl = `/auth/callback${window.location.search}`;
-      window.location.replace(callbackUrl);
+      window.location.replace(`/auth/callback${window.location.search}`);
       return;
     }
 
     try {
       const supabase = createClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       supabase.auth.getUser().then(({ data: { user } }: any) => {
-        if (user) {
-          setSignedIn(true);
-          setUserEmail(user.email);
-          supabase
-            .from("profiles")
-            .select("plan, full_name")
-            .eq("id", user.id)
-            .single()
-            .then(({ data: profile }: any) => {
-              if (profile?.plan) setCurrentPlan(profile.plan);
-              if (profile?.full_name) setUserName(profile.full_name);
-            });
-        }
+        if (!user) return;
+        setSignedIn(true);
+        setUserEmail(user.email);
+        supabase
+          .from("profiles")
+          .select("plan, full_name")
+          .eq("id", user.id)
+          .single()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then(({ data: profile }: any) => {
+            if (profile?.plan) setCurrentPlan(profile.plan);
+            if (profile?.full_name) setUserName(profile.full_name);
+          });
       });
     } catch {
-      // Unauthenticated visitor fallback
+      // Signed-out visitor: nothing to load.
     }
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Cycle the hero's sample output, unless the visitor prefers less motion.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setHeroStep((s) => (s + 1) % HERO_CYCLE.length), 3200);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const syllabus = CA_SYLLABUS[level];
+
   return (
-    <div className="landing-page min-h-screen bg-white text-[#0F172A]">
+    <div className="lp min-h-screen">
+      {/* Without JS the reveal observer never runs; don't leave sections invisible. */}
+      <noscript>
+        <style>{`.lp-reveal{opacity:1!important;transform:none!important}`}</style>
+      </noscript>
       {/* NAV */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-[#E2E8F0]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <span className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#1E3A8A]">
+      <header
+        data-scrolled={scrolled}
+        className={`sticky top-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-white/80 shadow-[0_1px_0_#E2E8F0] backdrop-blur-md" : "bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className={`${display} text-2xl font-bold text-[#1E3A8A]`}>
             Prepzo CA
-          </span>
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#how" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-              How it works
-            </a>
-            <a href="#features" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-              Features
-            </a>
-            <a href="#pricing" className="text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-              Pricing
-            </a>
-            <Link href="/auth/login" className="text-sm font-medium text-[#64748B] hover:text-[#0F172A] transition-colors">
-              Login
-            </Link>
-            <Link href="/auth/signup" className="px-5 py-2.5 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-sm font-semibold transition-all">
-              Start free
-            </Link>
-          </nav>
-          <Link href="/auth/signup" className="md:hidden px-4 py-2 rounded-xl bg-[#1E3A8A] text-white text-sm font-semibold">
-            Start free
           </Link>
+          <nav className="hidden items-center gap-7 md:flex">
+            {[
+              ["How it works", "#how"],
+              ["Features", "#features"],
+              ["Pricing", "#pricing"],
+              ["FAQ", "#faq"],
+            ].map(([label, href]) => (
+              <a key={href} href={href} className="text-sm text-[#64748B] transition-colors hover:text-[#0F172A]">
+                {label}
+              </a>
+            ))}
+            <Link href="/auth/login" className="text-sm font-medium text-[#64748B] transition-colors hover:text-[#0F172A]">
+              Log in
+            </Link>
+            <PrimaryLink href="/auth/signup" small>
+              Start free
+            </PrimaryLink>
+          </nav>
+          <div className="flex items-center gap-3 md:hidden">
+            <Link href="/auth/login" className="text-sm font-medium text-[#64748B]">
+              Log in
+            </Link>
+            <PrimaryLink href="/auth/signup" small>
+              Start free
+            </PrimaryLink>
+          </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section className="relative overflow-hidden pt-14 pb-16 md:pt-20 md:pb-24">
-        <div className="absolute inset-0 dot-grid opacity-60 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-white pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
-
-            <div className="landing-hero-copy flex-1 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#DBEAFE] border border-[#BFDBFE] text-[#1E3A8A] text-xs font-medium mb-7">
-                <span>✨</span>
-                Built for CA Foundation, Intermediate and Final
-              </div>
-              <h1 className="font-[family-name:var(--font-fraunces)] text-4xl sm:text-5xl lg:text-6xl font-bold text-[#0F172A] leading-[1.1] mb-5">
-                Your notes are already your syllabus.
-                <span className="text-[#1E3A8A]"> Now they&apos;re your question bank.</span>
+      <section className="relative -mt-16 overflow-hidden pt-28 pb-16 md:pt-32 md:pb-24">
+        <div className="dot-grid pointer-events-none absolute inset-0 opacity-50 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10">
+          <div className="text-center lg:col-span-7 lg:text-left">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#BFDBFE] bg-[#DBEAFE] px-3.5 py-1.5 text-xs font-medium text-[#1E3A8A]">
+                <span aria-hidden>📚</span> For CA Foundation, Intermediate &amp; Final
+              </span>
+            </Reveal>
+            <Reveal delay={80}>
+              <h1 className={`${display} mt-6 text-balance text-[2.5rem] font-bold leading-[1.08] tracking-tight text-[#0F172A] sm:text-5xl lg:text-[3.6rem]`}>
+                Turn your own CA notes into <span className="lp-marker">exam practice.</span>
               </h1>
-              <p className="text-lg text-[#64748B] max-w-lg mx-auto md:mx-0 mb-9 leading-relaxed">
-                Skip hours of manually building flashcards and question sets. Upload your CA notes
-                to generate exam-standard MCQs, step-by-step descriptive questions, and revision
-                cheatsheets in minutes.
+            </Reveal>
+            <Reveal delay={160}>
+              <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[#475569] lg:mx-0">
+                Upload a chapter as a PDF or a photo. Prepzo writes MCQs and descriptive questions
+                from it in your paper&rsquo;s format, marks your written answers point by point, and
+                brings back the ones you got wrong.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
-                <Link href="/auth/signup" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#1E3A8A] hover:bg-[#162D6B] text-white text-base font-semibold transition-all shadow-lg shadow-[#1E3A8A]/30">
-                  Start free
-                </Link>
-                <a href="#how" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white hover:bg-[#F8FAFF] border border-[#E2E8F0] text-[#0F172A] text-base font-semibold transition-all flex items-center justify-center gap-2">
-                  See how it works <ChevronRight size={16} />
+            </Reveal>
+            <Reveal delay={220}>
+              <ul className="mx-auto mt-6 flex max-w-xl flex-col items-center gap-2 text-sm text-[#334155] sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-5 lg:mx-0 lg:justify-start">
+                {["Free plan, no card needed", "Works with photos of notes", "Marks handwritten answers"].map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <Check size={15} strokeWidth={3} className="text-[#16A34A]" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+            <Reveal delay={280}>
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <PrimaryLink href="/auth/signup">
+                  Start free <ArrowRight size={17} />
+                </PrimaryLink>
+                <a
+                  href="#demo"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-7 py-3.5 text-base font-semibold text-[#0F172A] transition-all hover:-translate-y-0.5 hover:border-[#CBD5E1] sm:w-auto"
+                >
+                  See what it makes <ArrowDown size={16} />
                 </a>
               </div>
-            </div>
+            </Reveal>
+          </div>
 
-            {/* The transformation, shown rather than described */}
-            <div className="flex-shrink-0 w-full md:w-[420px]">
-              <div className="rounded-2xl border border-[#E2E8F0] bg-white p-3 shadow-[0_8px_40px_rgba(30,58,138,0.12)]">
-                <div className="flex items-center gap-3 rounded-xl bg-[#F8FAFF] px-4 py-3">
-                  <FileText size={18} className="shrink-0 text-[#1E3A8A]" />
-                  <span className="truncate text-sm font-medium text-[#0F172A]">
-                    Accounting — AS 2 Inventories.pdf
-                  </span>
+          {/* File in → practice out */}
+          <Reveal delay={200} className="relative mx-auto w-full max-w-md lg:col-span-5">
+            <p className={`${display} absolute -top-9 right-2 hidden rotate-[-4deg] text-base italic text-[#1E3A8A] sm:block`}>
+              one chapter in, practice out
+              <DoodleArrow />
+            </p>
+            <div className="rounded-3xl border border-[#E2E8F0] bg-white p-3 shadow-[0_20px_50px_-12px_rgba(30,58,138,0.25)]">
+              <div className="flex items-center gap-3 rounded-2xl bg-[#F8FAFF] px-4 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#1E3A8A] ring-1 ring-[#E2E8F0]">
+                  <FileText size={17} />
+                </span>
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-sm font-medium text-[#0F172A]">Accounting — AS 2 Inventories.pdf</p>
+                  <p className="text-[11px] text-[#94A3B8]">Split into topics &middot; matched to Advanced Accounting</p>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-center gap-2 py-3 text-xs font-medium text-[#94A3B8]">
-                  <div className="h-px w-10 bg-[#E2E8F0]" />
-                  <Sparkles size={13} className="text-[#1E3A8A]" />
-                  generated
-                  <div className="h-px w-10 bg-[#E2E8F0]" />
+              <div className="relative mx-auto my-2 h-10 w-px border-l-2 border-dashed border-[#BFDBFE]" aria-hidden>
+                <span className="lp-travel absolute -left-[5px] h-2 w-2 rounded-full bg-[#1E3A8A]" />
+              </div>
+
+              <div className="rounded-2xl border border-[#E2E8F0] p-4 text-left">
+                <div className="mb-3 flex gap-1.5" role="tablist" aria-label="Example output">
+                  {HERO_CYCLE.map((k, i) => (
+                    <button
+                      key={k}
+                      role="tab"
+                      aria-selected={heroStep === i}
+                      onClick={() => setHeroStep(i)}
+                      className={`h-1.5 flex-1 rounded-full transition-colors ${heroStep === i ? "bg-[#1E3A8A]" : "bg-[#E2E8F0]"}`}
+                    >
+                      <span className="sr-only">{k}</span>
+                    </button>
+                  ))}
                 </div>
-
-                <div className="rounded-xl border border-[#E2E8F0] p-4">
-                  <div className="flex items-center justify-between border-b border-[#F1F5F9] pb-2 mb-2.5">
-                    <span className="inline-flex items-center gap-1 rounded bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-semibold text-[#1E3A8A]">
-                      Subject: Accounting · Auto-Generated
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                      2 marks · −0.25
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm font-medium leading-relaxed text-[#0F172A]">
-                    As per AS 2, inventories are valued at:
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {HERO_OPTIONS.map((o) => (
-                      <div
-                        key={o.k}
-                        className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs ${
-                          o.ok
-                            ? "border-[#16A34A] bg-[#16A34A]/5 font-semibold text-[#15803D]"
-                            : "border-[#E2E8F0] text-[#64748B]"
-                        }`}
-                      >
-                        <span
-                          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                            o.ok ? "bg-[#16A34A] text-white" : "bg-[#F1F5F9] text-[#94A3B8]"
-                          }`}
-                        >
-                          {o.ok ? <Check size={11} strokeWidth={3} /> : o.k}
-                        </span>
-                        {o.t}
-                      </div>
-                    ))}
-                  </div>
+                <div key={heroStep} className="lp-swap-in min-h-[190px]">
+                  <HeroOutput kind={HERO_CYCLE[heroStep]} />
                 </div>
               </div>
             </div>
-
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* INTERACTIVE PRODUCT DEMO */}
-      <section className="py-16 md:py-24 bg-[#F8FAFF] border-y border-[#E2E8F0]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">
-              Turn one chapter into complete exam prep
-            </h2>
-            <p className="text-[#64748B] max-w-xl mx-auto">
-              Every upload automatically yields four distinct study tools—tailored to ICAI testing patterns.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                aria-pressed={tab === t.key}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                  tab === t.key
-                    ? "bg-[#1E3A8A] text-white shadow-md shadow-[#1E3A8A]/20"
-                    : "border border-[#E2E8F0] bg-white text-[#64748B] hover:text-[#0F172A]"
-                }`}
-              >
-                <t.icon size={15} />
-                {t.label}
-              </button>
+      {/* SOUND FAMILIAR */}
+      <section className="py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <SectionHead index="01" eyebrow="Sound familiar?" title="Reading isn’t the hard part. Practising is." />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {PAINS.map((p, i) => (
+              <Reveal key={p.index} delay={i * 90}>
+                <div className="h-full rounded-2xl border border-[#E2E8F0] bg-white p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-card)]">
+                  <div className="flex items-center justify-between">
+                    <span className={`${mono} text-xs font-medium text-[#94A3B8]`}>{p.index}</span>
+                    <span className="lp-wiggle inline-block text-2xl" aria-hidden>
+                      {p.emoji}
+                    </span>
+                  </div>
+                  <p className="mt-5 text-[15px] leading-relaxed text-[#334155]">{p.text}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
+          <Reveal>
+            <p className="mt-10 text-center text-[15px] text-[#64748B]">
+              Prepzo does the practice part. <span className="font-semibold text-[#0F172A]">You bring the notes.</span>
+            </p>
+          </Reveal>
+        </div>
+      </section>
 
-          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_10px_40px_rgba(30,58,138,0.10)] sm:p-7">
-            {tab === "descriptive" && <DescriptiveSample />}
-            {tab === "practice" && <PracticeSample />}
-            {tab === "tutor" && <TutorSample />}
-            {tab === "cheatsheet" && <CheatsheetSample />}
-          </div>
+      {/* DEMO TABS */}
+      <section id="demo" className="scroll-mt-20 border-y border-[#E2E8F0] bg-[#F8FAFF] py-16 md:py-24">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <SectionHead
+            index="02"
+            eyebrow="See it work"
+            title="One chapter, four ways to practise"
+            sub="Examples of what Prepzo makes from a chapter on AS 2 Inventories."
+          />
+          <Reveal className="mt-10">
+            <div className="mx-auto flex max-w-full justify-center overflow-x-auto">
+              <div className="relative inline-flex gap-1 rounded-2xl border border-[#E2E8F0] bg-white p-1">
+                {TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    aria-pressed={tab === t.key}
+                    className={`relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 sm:px-4 ${
+                      tab === t.key
+                        ? "bg-[#1E3A8A] text-white shadow-[0_6px_16px_-6px_rgba(30,58,138,0.6)]"
+                        : "text-[#64748B] hover:text-[#0F172A]"
+                    }`}
+                  >
+                    <t.icon size={15} className="hidden sm:block" />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6 rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_20px_50px_-20px_rgba(30,58,138,0.25)] sm:p-8">
+              <div key={tab} className="lp-swap-in">
+                {tab === "mcq" && <McqSample />}
+                {tab === "descriptive" && <DescriptiveSample />}
+                {tab === "tutor" && <TutorSample />}
+                {tab === "cheatsheet" && <CheatsheetSample />}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="py-16 md:py-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">How Prepzo CA works</h2>
-            <p className="text-[#64748B] max-w-xl mx-auto">From your own notes to exam-ready practice, in three steps.</p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {HOW_IT_WORKS.map((step, i) => (
-              <div
-                key={step.title}
-                className="flex flex-col rounded-2xl border border-[#E2E8F0] bg-white p-7 shadow-[0_10px_32px_rgba(30,58,138,0.08)]"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#DBEAFE] text-[#1E3A8A]">
-                  <step.icon size={22} />
+      <section id="how" className="scroll-mt-20 py-16 md:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <SectionHead index="03" eyebrow="How it works" title="From notes to practice in three steps" />
+          <ol className="mt-12 grid gap-5 md:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <Reveal as="li" key={s.title} delay={i * 90}>
+                <div className="relative h-full rounded-2xl border border-[#E2E8F0] bg-white p-7 transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-card)]">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#DBEAFE] text-xl" aria-hidden>
+                      {s.emoji}
+                    </span>
+                    <span className={`${mono} text-xs font-medium text-[#94A3B8]`}>Step {i + 1}</span>
+                  </div>
+                  <h3 className={`${display} mt-5 text-xl font-bold leading-snug text-[#0F172A]`}>{s.title}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#64748B]">{s.body}</p>
                 </div>
-                <h3 className="font-[family-name:var(--font-fraunces)] text-xl font-bold leading-tight text-[#0F172A]">
-                  {i + 1}. {step.title}
-                </h3>
-                <p className="mt-3 text-sm text-[#64748B] leading-relaxed">{step.description}</p>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section id="features" className="scroll-mt-20 pb-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <SectionHead index="04" eyebrow="What you get" title="Built for how CA papers are actually written" />
+        </div>
+        {FEATURES.map((f, i) => (
+          <FeatureRow key={f.eyebrow} {...f} reverse={i % 2 === 1} />
+        ))}
+      </section>
+
+      {/* COVERAGE */}
+      <section className="border-y border-[#E2E8F0] bg-[#F8FAFF] py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <SectionHead
+            index="05"
+            eyebrow="Every level, every paper"
+            title="Questions follow your paper’s format"
+            sub="Foundation objective papers get four-option MCQs with −0.25 negative marking. Inter and Final questions follow the 70% descriptive, 30% MCQ split."
+          />
+          <Reveal className="mt-10">
+            <div className="flex justify-center">
+              <div className="inline-flex gap-1 rounded-2xl border border-[#E2E8F0] bg-white p-1">
+                {(Object.keys(CA_SYLLABUS) as CaLevel[]).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLevel(l)}
+                    aria-pressed={level === l}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all sm:px-5 ${
+                      level === l ? "bg-[#1E3A8A] text-white" : "text-[#64748B] hover:text-[#0F172A]"
+                    }`}
+                  >
+                    {l === "Intermediate" ? "Inter" : l}
+                  </button>
+                ))}
               </div>
+            </div>
+            <div key={level} className="lp-swap-in mt-6 rounded-3xl border border-[#E2E8F0] bg-white p-5 sm:p-8">
+              <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2 border-b border-[#F1F5F9] pb-4">
+                <h3 className={`${display} text-2xl font-bold text-[#0F172A]`}>CA {level}</h3>
+                <span className={`${mono} text-xs text-[#64748B]`}>
+                  {syllabus.papers.length} papers &middot; {syllabus.totalMarks} marks
+                  {syllabus.groups ? " · 2 groups" : ""}
+                </span>
+              </div>
+              <div className={syllabus.groups ? "grid gap-5 md:grid-cols-2" : ""}>
+                {(syllabus.groups ?? [{ name: null, papers: syllabus.papers }]).map((g) => (
+                  <div key={g.name ?? "all"}>
+                    {g.name && <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[#1E3A8A]">{g.name}</p>}
+                    <ul className={`grid gap-2.5 ${syllabus.groups ? "" : "sm:grid-cols-2"}`}>
+                      {g.papers.map((p) => (
+                        <li
+                          key={p.code}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-[#E2E8F0] px-3.5 py-3 text-sm"
+                        >
+                          <span className="min-w-0">
+                            <span className={`${mono} mr-2 text-[11px] text-[#94A3B8]`}>{p.code}</span>
+                            <span className="font-medium text-[#0F172A]">{p.name}</span>
+                          </span>
+                          <span className="shrink-0 rounded-md bg-[#F1F5F9] px-2 py-1 text-[10px] font-semibold text-[#64748B]">
+                            {formatLabel(p)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* GOOD TO KNOW */}
+      <section className="py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <SectionHead index="06" eyebrow="Good to know" title="What Prepzo is, and what it isn’t" />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {NOTES.map((n, i) => (
+              <Reveal key={n.title} delay={i * 90}>
+                <div
+                  className={`h-full rounded-2xl border p-6 transition-transform duration-200 hover:rotate-0 ${n.tone} ${
+                    i === 1 ? "md:rotate-[1deg]" : "md:-rotate-[1deg]"
+                  }`}
+                >
+                  <span className="text-2xl" aria-hidden>
+                    {n.emoji}
+                  </span>
+                  <h3 className="mt-3 font-semibold text-[#0F172A]">{n.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#475569]">{n.body}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* DIFFERENTIATORS */}
-      <section id="features" className="pb-4">
-        {FEATURE_ROWS.map((row) => (
-          <FeatureRow key={row.eyebrow} {...row} sample={SAMPLES[row.sampleKey]} />
-        ))}
-      </section>
-
-      {/* COVERAGE */}
-      <section className="py-16 md:py-24 bg-[#F8FAFF] border-y border-[#E2E8F0]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">
-              Every level, every paper
-            </h2>
-            <p className="text-[#64748B] max-w-xl mx-auto">
-              Prepzo knows each paper&rsquo;s real format &mdash; objective MCQs, descriptive answers,
-              case studies, and where negative marking applies.
-            </p>
+      {/* PRICING */}
+      <section id="pricing" className="scroll-mt-20 border-t border-[#E2E8F0] py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <SectionHead
+            index="07"
+            eyebrow="Pricing"
+            title="Start free. Upgrade when you need more."
+            sub="Try every core tool on the free plan, no card needed. Paid plans raise the limits and add study history, PDF cheatsheets and review ordering."
+          />
+          <div className="mt-10">
+            <PricingTable
+              signedIn={signedIn}
+              currentPlan={currentPlan}
+              userEmail={userEmail}
+              userName={userName}
+              linkToPricing
+            />
           </div>
-
-          {/* Interactive Tier Switcher Tabs */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex rounded-xl border border-[#E2E8F0] bg-white p-1 gap-1 shadow-sm">
-              {LEVELS.map((lvl) => (
-                <button
-                  key={lvl.level}
-                  onClick={() => setActiveLevel(lvl.level)}
-                  className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${
-                    activeLevel === lvl.level
-                      ? "bg-[#1E3A8A] text-white shadow-sm"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  }`}
-                >
-                  CA {lvl.level}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected Tier Papers Card */}
-          {(() => {
-            const current = LEVELS.find((l) => l.level === activeLevel) || LEVELS[1];
-            return (
-              <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 sm:p-8 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F1F5F9] pb-4 mb-6">
-                  <div>
-                    <h3 className="font-[family-name:var(--font-fraunces)] text-2xl font-bold text-[#0F172A]">
-                      CA {current.level}
-                    </h3>
-                    <p className="text-xs text-[#64748B] mt-0.5">{current.meta}</p>
-                  </div>
-                  <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-xs font-semibold text-[#1E3A8A]">
-                    {current.badge}
-                  </span>
-                </div>
-
-                {current.groups ? (
-                  <div className="grid gap-6 md:grid-cols-2">
-                    {current.groups.map((group) => (
-                      <div key={group.name} className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#1E3A8A] mb-3">
-                          {group.name}
-                        </h4>
-                        <ul className="space-y-2.5">
-                          {group.papers.map((p) => (
-                            <li
-                              key={p.name}
-                              className="flex items-center justify-between gap-2 rounded-lg bg-white p-2.5 border border-[#E2E8F0]/70 text-xs shadow-2xs"
-                            >
-                              <span className="font-medium text-[#0F172A]">{p.name}</span>
-                              <span className="shrink-0 text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded">
-                                {p.tag}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {current.papers?.map((p) => (
-                      <div
-                        key={p.name}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFF] p-3.5 text-xs"
-                      >
-                        <span className="font-medium text-[#0F172A]">{p.name}</span>
-                        <span className="shrink-0 text-[10px] font-semibold text-[#64748B] bg-white px-2 py-1 rounded border border-[#E2E8F0]">
-                          {p.tag}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="pricing" className="py-16 md:py-24 border-b border-[#E2E8F0]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-4">
-              Plans &amp; Pricing
-            </h2>
-            <p className="text-[#64748B] max-w-xl mx-auto">
-              Every plan works on your own notes — upload, generate questions and flashcards, and study them on a spaced
-              schedule. Paid plans raise the limits.
-            </p>
+      {/* FAQ */}
+      <section id="faq" className="scroll-mt-20 border-t border-[#E2E8F0] bg-[#F8FAFF] py-16 md:py-24">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <SectionHead index="08" eyebrow="FAQ" title="Questions you might have" />
+          <div className="mt-10 space-y-3">
+            {FAQS.map((f) => (
+              <FaqItem key={f.q} q={f.q} a={f.a} />
+            ))}
           </div>
-          <PricingTable
-            signedIn={signedIn}
-            currentPlan={currentPlan}
-            userEmail={userEmail}
-            userName={userName}
-            hideTerms={true}
-          />
+          <p className="mt-8 text-center text-sm text-[#64748B]">
+            Something else?{" "}
+            <a href="mailto:support@prepzo.study" className="font-semibold text-[#1E3A8A] underline-offset-2 hover:underline">
+              support@prepzo.study
+            </a>
+          </p>
         </div>
       </section>
 
       {/* FINAL CTA */}
       <section className="py-20 md:py-28">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-          <h2 className="font-[family-name:var(--font-fraunces)] text-3xl md:text-4xl font-bold text-[#0F172A] mb-5">
-            Start with one chapter.
-          </h2>
-          <p className="mx-auto mb-9 max-w-xl text-lg text-[#64748B] leading-relaxed">
-            Upload your most challenging chapter and experience how much faster prep feels with instant evaluation and tailored recall.
-          </p>
-          <Link
-            href="/auth/signup"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A8A] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[#1E3A8A]/30 transition-all hover:bg-[#162D6B]"
-          >
-            Start free <ArrowRight size={17} />
-          </Link>
-        </div>
+        <Reveal className="mx-auto max-w-3xl px-4 sm:px-6">
+          <div className="relative overflow-hidden rounded-3xl bg-[#1E3A8A] px-6 py-14 text-center sm:px-12">
+            <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle,#ffffff_1px,transparent_1px)] [background-size:22px_22px]" />
+            <div className="relative">
+              <span className="text-3xl" aria-hidden>
+                ✍️
+              </span>
+              <h2 className={`${display} mt-4 text-3xl font-bold leading-tight text-white md:text-4xl`}>
+                Start with the chapter you&rsquo;ve been avoiding.
+              </h2>
+              <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-[#DBEAFE]">
+                Upload it, make ten questions, and see where you&rsquo;d lose marks. Free, and no card
+                needed.
+              </p>
+              <Link
+                href="/auth/signup"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-semibold text-[#1E3A8A] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-8px_rgba(0,0,0,0.35)] active:translate-y-0 active:scale-[0.98]"
+              >
+                Start free <ArrowRight size={17} />
+              </Link>
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* FOOTER */}
-      <footer className="landing-footer border-t border-[#E2E8F0] py-14">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 text-center sm:px-6 md:flex-row md:items-start md:justify-between md:text-left">
-          <div className="flex min-w-[220px] flex-col items-center gap-1 md:items-start">
-            <span className="font-[family-name:var(--font-fraunces)] text-xl font-bold text-[#1E3A8A]">Prepzo CA</span>
-            <p className="mt-2 max-w-xs text-xs leading-5 text-[#64748B]">
-              Prepzo is an independent study platform and is not affiliated with ICAI.
+      <footer className="border-t border-[#E2E8F0] py-14">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 text-center sm:px-6 md:flex-row md:justify-between md:text-left">
+          <div className="flex flex-col items-center gap-2 md:items-start">
+            <span className={`${display} text-xl font-bold text-[#1E3A8A]`}>Prepzo CA</span>
+            <p className="max-w-xs text-sm leading-relaxed text-[#64748B]">
+              Practice from your own notes, for CA Foundation, Intermediate and Final.
             </p>
-            <p className="text-xs font-medium text-[#64748B]">Built for Indian CA aspirants</p>
+            <p className="max-w-xs text-xs leading-5 text-[#94A3B8]">
+              An independent study tool, not affiliated with ICAI.
+            </p>
           </div>
 
-          <div className="flex min-w-[220px] flex-col items-center gap-3 text-sm text-[#64748B] md:items-start">
-            <p className="text-sm font-semibold text-[#0F172A]">Support</p>
-            <a href="mailto:support@prepzo.study" className="hover:text-[#0F172A] transition-colors">support@prepzo.study</a>
-            <div className="flex items-center gap-2">
-              <a
-                href="https://www.linkedin.com/company/131964161/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Prepzo on LinkedIn"
-                className="grid h-9 w-9 place-items-center rounded-full border border-[#E2E8F0] text-[#64748B] transition-colors hover:border-[#1E3A8A] hover:text-[#1E3A8A]"
-              >
-                <LinkedInIcon />
-              </a>
-              <a
-                href="https://www.instagram.com/prepzo.study?igsh=eXpzNnAxazZva3ds"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Prepzo on Instagram"
-                className="grid h-9 w-9 place-items-center rounded-full border border-[#E2E8F0] text-[#64748B] transition-colors hover:border-[#1E3A8A] hover:text-[#1E3A8A]"
-              >
-                <InstagramIcon />
-              </a>
-            </div>
+          <div className="grid grid-cols-2 gap-10 text-sm sm:grid-cols-3">
+            <FooterCol title="Product" links={[["How it works", "#how"], ["Pricing", "/pricing"], ["FAQ", "#faq"]]} />
+            <FooterCol title="Account" links={[["Log in", "/auth/login"], ["Sign up", "/auth/signup"]]} />
+            <FooterCol title="Legal" links={[["Terms", "/terms"], ["Privacy Policy", "/privacy-policy"]]} />
           </div>
+        </div>
 
-          <div className="flex flex-1 justify-end">
-            <div className="grid gap-4 text-sm font-medium text-[#64748B] md:grid-cols-2 md:justify-items-end md:text-right">
-              <div className="flex flex-col gap-2">
-                <Link href="/pricing" className="hover:text-[#0F172A] transition-colors">Pricing</Link>
-                <Link href="/auth/login" className="hover:text-[#0F172A] transition-colors">Login</Link>
-                <Link href="/auth/signup" className="hover:text-[#0F172A] transition-colors">Sign Up</Link>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Link href="/terms" className="hover:text-[#0F172A] transition-colors">Terms</Link>
-                <Link href="/privacy-policy" className="hover:text-[#0F172A] transition-colors">Privacy Policy</Link>
-              </div>
-            </div>
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-[#E2E8F0] px-4 pt-6 sm:flex-row sm:px-6">
+          <p className="text-xs text-[#94A3B8]">
+            © {new Date().getFullYear()} Prepzo &middot; Made in Hyderabad for CA students{" "}
+            <span aria-hidden>📚</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <a href="mailto:support@prepzo.study" className="mr-2 text-xs text-[#64748B] hover:text-[#0F172A]">
+              support@prepzo.study
+            </a>
+            <SocialLink href="https://www.linkedin.com/company/131964161/" label="Prepzo on LinkedIn">
+              <LinkedInIcon />
+            </SocialLink>
+            <SocialLink href="https://www.instagram.com/prepzo.study?igsh=eXpzNnAxazZva3ds" label="Prepzo on Instagram">
+              <InstagramIcon />
+            </SocialLink>
           </div>
         </div>
       </footer>
@@ -458,300 +527,133 @@ export default function CaLandingPage() {
   );
 }
 
-/* ── Layout helper ───────────────────────────────────────────── */
+/* ── Building blocks ─────────────────────────────────────────── */
+
+function PrimaryLink({ href, children, small }: { href: string; children: React.ReactNode; small?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E3A8A] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(30,58,138,0.7)] transition-all hover:-translate-y-0.5 hover:bg-[#162D6B] active:translate-y-0 active:scale-[0.98] ${
+        small ? "px-4 py-2 text-sm" : "w-full px-7 py-3.5 text-base sm:w-auto"
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function SectionHead({ index, eyebrow, title, sub }: { index: string; eyebrow: string; title: string; sub?: string }) {
+  return (
+    <Reveal className="mx-auto max-w-2xl text-center">
+      <p className={`${mono} text-xs font-medium uppercase tracking-[0.14em] text-[#1E3A8A]`}>
+        {index} / {eyebrow}
+      </p>
+      <h2 className={`${display} mt-3 text-balance text-3xl font-bold leading-tight tracking-tight text-[#0F172A] md:text-4xl`}>{title}</h2>
+      {sub && <p className="mt-4 text-base leading-relaxed text-[#64748B]">{sub}</p>}
+    </Reveal>
+  );
+}
 
 function FeatureRow({
   eyebrow,
-  badge,
-  badgeColor,
   title,
   body,
+  note,
   sample,
-  highlight,
   reverse,
 }: {
   eyebrow: string;
-  badge?: string;
-  badgeColor?: string;
   title: string;
   body: string;
+  note?: string;
   sample: React.ReactNode;
-  highlight?: { label: string; text: string };
   reverse?: boolean;
 }) {
   return (
-    <div className="py-12 md:py-16">
+    <div className="py-10 md:py-14">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div
-          className={`flex flex-col items-center gap-10 md:gap-14 ${
-            reverse ? "md:flex-row-reverse" : "md:flex-row"
-          }`}
-        >
-          <div className="flex-1 text-center md:text-left">
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[#1E3A8A]">{eyebrow}</span>
-              {badge && (
-                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeColor || "bg-[#DBEAFE] text-[#1E3A8A]"}`}>
-                  {badge}
-                </span>
-              )}
-            </div>
-            <h3 className="font-[family-name:var(--font-fraunces)] text-2xl md:text-3xl font-bold leading-tight text-[#0F172A]">
-              {title}
-            </h3>
-            <p className="mt-4 text-[#64748B] leading-relaxed">{body}</p>
-            {highlight && (
-              <div className="mt-5 rounded-xl border-l-4 border-[#1E3A8A] bg-[#F8FAFF] p-3.5 text-left border border-r-[#E2E8F0] border-y-[#E2E8F0]">
-                <span className="block text-[11px] font-bold uppercase tracking-wider text-[#1E3A8A]">
-                  {highlight.label}
-                </span>
-                <span className="mt-0.5 block text-xs text-[#475569]">{highlight.text}</span>
-              </div>
+        <div className={`flex flex-col items-center gap-10 md:gap-14 ${reverse ? "md:flex-row-reverse" : "md:flex-row"}`}>
+          <Reveal className="flex-1 text-center md:text-left">
+            <span className="inline-block rounded-full bg-[#DBEAFE] px-3 py-1 text-xs font-semibold text-[#1E3A8A]">{eyebrow}</span>
+            <h3 className={`${display} mt-4 text-balance text-2xl font-bold leading-tight text-[#0F172A] md:text-3xl`}>{title}</h3>
+            <p className="mt-4 leading-relaxed text-[#64748B]">{body}</p>
+            {note && (
+              <p className="mt-5 inline-flex items-start gap-2 rounded-xl bg-[#FEF3C7] px-3.5 py-2.5 text-left text-xs leading-relaxed text-[#78350F]">
+                <span aria-hidden>💡</span>
+                {note}
+              </p>
             )}
-          </div>
-          <div className="w-full flex-1 min-w-0">
-            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[0_10px_36px_rgba(30,58,138,0.08)]">
+          </Reveal>
+          <Reveal delay={120} className="w-full min-w-0 flex-1">
+            <div className="rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-[0_20px_50px_-24px_rgba(30,58,138,0.3)] transition-transform duration-300 hover:-translate-y-1 sm:p-6">
               {sample}
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </div>
   );
 }
 
-/* ── Samples ─────────────────────────────────────────────────── */
-
-function DescriptiveSample({ compact }: { compact?: boolean }) {
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-            Corporate and Other Laws · Descriptive
-          </p>
-          <p className="mt-1.5 text-sm font-medium leading-relaxed text-[#0F172A]">
-            State any four conditions a company must comply with under Section 73(2) of the
-            Companies Act, 2013 before accepting deposits from its members.
-          </p>
-        </div>
-        <span className="shrink-0 rounded-lg bg-[#1E3A8A] px-3 py-1.5 text-xs font-bold text-white">
-          2 / 4 marks
-        </span>
-      </div>
-
-      <div className="mt-4 rounded-xl bg-[#F8FAFF] p-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">Your answer</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-[#475569]">
-          The company must issue a circular to its members showing its financial position, and
-          file it with the Registrar. It also has to certify that it has not defaulted in
-          repaying any earlier deposits.
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[#16A34A]/30 bg-[#16A34A]/5 p-3.5">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-[#15803D]">
-            <Check size={13} strokeWidth={3} /> What you got right
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {GOT_RIGHT.map((t) => (
-              <li key={t} className="text-[11px] leading-relaxed text-[#475569]">&bull; {t}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="rounded-xl border border-[#DC2626]/30 bg-[#DC2626]/5 p-3.5">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-[#B91C1C]">
-            <X size={13} strokeWidth={3} /> What you missed
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {MISSED.map((t) => (
-              <li key={t} className="text-[11px] leading-relaxed text-[#475569]">&bull; {t}</li>
-            ))}
-          </ul>
+    <div className="rounded-2xl border border-[#E2E8F0] bg-white">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+      >
+        <span className="font-semibold text-[#0F172A]">{q}</span>
+        <Plus size={18} className={`shrink-0 text-[#1E3A8A] transition-transform duration-200 ${open ? "rotate-45" : ""}`} />
+      </button>
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <p className="px-5 pb-5 text-sm leading-relaxed text-[#475569]">{a}</p>
         </div>
       </div>
-
-      {!compact && (
-        <div className="mt-3 rounded-xl border border-[#E2E8F0] p-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">How to score higher</p>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-[#475569]">
-            For a &ldquo;state any four&rdquo; question, number your points and give one line each
-            &mdash; marks are awarded per condition, so four short points beat two detailed ones.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-function PracticeSample() {
+function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-        Advanced Accounting · MCQ · 2 marks · &minus;0.25
-      </p>
-      <p className="mt-2 text-sm font-medium leading-relaxed text-[#0F172A]">
-        A company values its closing inventory at &#8377;4,20,000 (cost), whose net realisable
-        value is &#8377;3,85,000. As per AS 2, the amount carried in the balance sheet is:
-      </p>
-      <div className="mt-4 space-y-2">
-        {PRACTICE_OPTIONS.map((o) => (
-          <div
-            key={o.k}
-            className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${
-              o.ok
-                ? "border-[#16A34A] bg-[#16A34A]/5 font-semibold text-[#15803D]"
-                : "border-[#E2E8F0] text-[#64748B]"
-            }`}
-          >
-            <span
-              className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                o.ok ? "bg-[#16A34A] text-white" : "bg-[#F1F5F9] text-[#94A3B8]"
-              }`}
-            >
-              {o.ok ? <Check size={11} strokeWidth={3} /> : o.k}
-            </span>
-            {o.t}
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 rounded-xl bg-[#F8FAFF] p-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">Explanation</p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-[#475569]">
-          AS 2 requires inventories to be carried at the lower of cost and net realisable value.
-          NRV (&#8377;3,85,000) is below cost (&#8377;4,20,000), so the write-down of
-          &#8377;35,000 is charged to the statement of profit and loss.
-        </p>
-      </div>
+    <div className="flex flex-col items-center gap-2 md:items-start">
+      <p className="mb-1 font-semibold text-[#0F172A]">{title}</p>
+      {links.map(([label, href]) => (
+        <Link key={label} href={href} className="text-[#64748B] transition-colors hover:text-[#0F172A]">
+          {label}
+        </Link>
+      ))}
     </div>
   );
 }
 
-function TutorSample() {
+function SocialLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 border-b border-[#E2E8F0] pb-3">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#DBEAFE] text-[#1E3A8A]">
-          <MessageCircle size={15} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-[#0F172A]">AI Teacher</p>
-          <p className="truncate text-[10px] text-[#94A3B8]">
-            Reading: Accounting &mdash; AS 2 Inventories.pdf
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <p className="max-w-[80%] rounded-2xl rounded-br-sm bg-[#1E3A8A] px-3.5 py-2.5 text-xs leading-relaxed text-white">
-          Why does AS 2 use net realisable value instead of market price?
-        </p>
-      </div>
-
-      <div className="mt-3 flex justify-start">
-        <p className="max-w-[85%] rounded-2xl rounded-bl-sm bg-[#F8FAFF] px-3.5 py-2.5 text-xs leading-relaxed text-[#475569]">
-          Because NRV is what <em>this</em> enterprise will actually realise in the ordinary
-          course of business &mdash; the estimated selling price less the costs still needed to
-          complete and sell the item. Market price ignores both. Your notes make the same point
-          under &ldquo;Measurement&rdquo;: inventory should never be carried above the amount
-          expected to be recovered from it.
-        </p>
-      </div>
-
-      <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#DBEAFE] px-2.5 py-1.5 text-[10px] font-semibold text-[#1E3A8A]">
-        <FileText size={11} /> Answered from your upload
-      </div>
-    </div>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="grid h-9 w-9 place-items-center rounded-full border border-[#E2E8F0] text-[#64748B] transition-colors hover:border-[#1E3A8A] hover:text-[#1E3A8A]"
+    >
+      {children}
+    </a>
   );
 }
 
-function CheatsheetSample() {
+function DoodleArrow() {
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] pb-3">
-        <p className="text-sm font-semibold text-[#0F172A]">AS 2 &mdash; Valuation of Inventories</p>
-        <span className="shrink-0 rounded-lg border border-[#E2E8F0] px-2.5 py-1 text-[10px] font-semibold text-[#64748B]">
-          Export PDF
-        </span>
-      </div>
-      <div className="mt-3.5 space-y-3">
-        {CHEATSHEET_ROWS.map((r) => (
-          <div key={r.h}>
-            <p className="text-[11px] font-bold text-[#1E3A8A]">{r.h}</p>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-[#475569]">{r.b}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mt-4 text-[10px] italic text-[#94A3B8]">
-        Editable &mdash; change any line and it saves to your own copy.
-      </p>
-    </div>
+    <svg aria-hidden viewBox="0 0 80 50" className="absolute -bottom-9 left-2 h-10 w-16 text-[#1E3A8A]" fill="none">
+      <path d="M70 4 C 55 6, 30 10, 22 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M14 30 L 22 40 L 30 31" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
-
-function RealPaperSample() {
-  return (
-    <div>
-      <div className="flex items-center gap-3 rounded-xl bg-[#F8FAFF] px-4 py-3">
-        <ClipboardCheck size={18} className="shrink-0 text-[#1E3A8A]" />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-[#0F172A]">CA Inter &mdash; Advanced Accounting</p>
-          <p className="text-[11px] text-[#94A3B8]">Uploaded paper &middot; 38 questions transcribed</p>
-        </div>
-      </div>
-      <div className="mt-3 rounded-xl border border-[#E2E8F0] p-4">
-        <span className="inline-block rounded-md bg-[#DBEAFE] px-2 py-0.5 text-[10px] font-bold text-[#1E3A8A]">
-          Case study
-        </span>
-        <p className="mt-2 text-[11px] leading-relaxed text-[#475569]">
-          Sunrise Ltd. holds 12,000 units of inventory purchased at &#8377;35 each. At year end
-          the market has fallen and each unit can be sold for &#8377;32, after selling costs of
-          &#8377;1.50 per unit&hellip;
-        </p>
-        <div className="mt-3 space-y-2 border-t border-[#E2E8F0] pt-3">
-          {PAPER_SUBQUESTIONS.map((q) => (
-            <p key={q} className="text-[11px] font-medium leading-relaxed text-[#0F172A]">{q}</p>
-          ))}
-        </div>
-      </div>
-      <p className="mt-3 text-[10px] italic text-[#94A3B8]">
-        Transcribed word-for-word, with the passage kept attached to every sub-question that reads off it.
-      </p>
-    </div>
-  );
-}
-
-function RecallSample() {
-  return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">Due today</p>
-      <div className="mt-3 space-y-2.5">
-        {RECALL_CARDS.map((c) => (
-          <div key={c.t} className="flex items-center gap-3 rounded-xl border border-[#E2E8F0] px-3.5 py-3">
-            <div
-              className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
-                c.bad ? "bg-[#DC2626]/10 text-[#B91C1C]" : "bg-[#16A34A]/10 text-[#15803D]"
-              }`}
-            >
-              <Layers size={15} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-[#0F172A]">{c.t}</p>
-              <p className="text-[10px] text-[#94A3B8]">{c.s}</p>
-            </div>
-            <span className="shrink-0 text-[10px] font-semibold text-[#1E3A8A]">{c.due}</span>
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-[10px] italic text-[#94A3B8]">
-        Wrong answers return sooner. Cards you keep getting right move further away.
-      </p>
-    </div>
-  );
-}
-
-/* ── Icons ───────────────────────────────────────────────────── */
 
 function LinkedInIcon() {
   return (
@@ -771,215 +673,127 @@ function InstagramIcon() {
 
 /* ── Content ─────────────────────────────────────────────────── */
 
-const SAMPLES: Record<string, React.ReactNode> = {
-  descriptive: <DescriptiveSample compact />,
-  realpaper: <RealPaperSample />,
-  tutor: <TutorSample />,
-  recall: <RecallSample />,
-};
-
-const FEATURE_ROWS: {
-  eyebrow: string;
-  badge?: string;
-  badgeColor?: string;
-  title: string;
-  body: string;
-  sampleKey: string;
-  highlight?: { label: string; text: string };
-  reverse?: boolean;
-}[] = [
+const PAINS = [
   {
-    eyebrow: "Descriptive Evaluation",
-    badge: "ICAI Marking Rubric",
-    badgeColor: "bg-[#DBEAFE] text-[#1E3A8A]",
-    title: "CA is not an MCQ exam. Your practice should not be either.",
-    body: "Write out a full answer the way you would in the examination hall. Prepzo marks your attempt against ICAI mark allocations—identifying key provisions you nailed and points you missed. It works even on papers without published suggested answers.",
-    sampleKey: "descriptive",
-    highlight: {
-      label: "Mark Allocation Check",
-      text: "Evaluates exact conditions and sub-points so you know where you gained or dropped marks.",
-    },
+    index: "01",
+    emoji: "🫠",
+    text: "You’ve read the chapter three times, and you still couldn’t say whether you’d score on it.",
   },
   {
-    eyebrow: "Past & Mock Papers",
-    badge: "100% Verbatim Extraction",
-    badgeColor: "bg-[#DCFCE7] text-[#15803D]",
-    title: "Practice the actual paper, not an approximation.",
-    body: "Upload past or mock ICAI question papers and Prepzo transcribes every question verbatim—no hallucination, no unnecessary paraphrasing. Complex case-study passages stay directly attached to every dependent sub-question.",
-    sampleKey: "realpaper",
-    reverse: true,
-    highlight: {
-      label: "Case-Study Integrity",
-      text: "Multi-part questions remain grouped with their parent passage for authentic exam practice.",
-    },
+    index: "02",
+    emoji: "😮‍💨",
+    text: "Making your own question bank takes longer than studying the chapter did.",
   },
   {
-    eyebrow: "Contextual AI Tutor",
-    badge: "Grounded in Your Syllabus",
-    badgeColor: "bg-[#EDE9FE] text-[#6D28D9]",
-    title: "A dedicated tutor that has read your specific notes.",
-    body: "Ask doubts directly against your uploaded study notes. You get focused, syllabus-compliant explanations instead of generic internet answers. Focus questions on a single standard or your entire subject bank.",
-    sampleKey: "tutor",
-    highlight: {
-      label: "Zero External Noise",
-      text: "Answers draw citations and definitions straight from your provided study documents.",
-    },
-  },
-  {
-    eyebrow: "Adaptive Review",
-    badge: "Automated Spaced Repetition",
-    badgeColor: "bg-[#FEF3C7] text-[#B45309]",
-    title: "Meet every concept again, right before you forget it.",
-    body: "Every question and flashcard you attempt feeds into an intelligent spaced review queue. Challenging questions return tomorrow; mastered concepts return in weeks, freeing you from manual revision timetabling.",
-    sampleKey: "recall",
-    reverse: true,
-    highlight: {
-      label: "Scientifically Proven Retention",
-      text: "Spaced intervals ensure definitions, formulas, and section numbers stick until exam day.",
-    },
+    index: "03",
+    emoji: "🤷",
+    text: "You write out descriptive answers, but nobody tells you which points would have earned the marks.",
   },
 ];
 
-const HERO_OPTIONS = [
-  { k: "A", t: "Cost", ok: false },
-  { k: "B", t: "Net realisable value", ok: false },
-  { k: "C", t: "Lower of cost and net realisable value", ok: true },
-  { k: "D", t: "Higher of cost and net realisable value", ok: false },
-];
-
-const PRACTICE_OPTIONS = [
-  { k: "A", t: "₹4,20,000", ok: false },
-  { k: "B", t: "₹3,85,000", ok: true },
-  { k: "C", t: "₹4,02,500", ok: false },
-  { k: "D", t: "₹8,05,000", ok: false },
-];
-
-const GOT_RIGHT = [
-  "Circular to members showing the company’s financial position",
-  "Certificate of no default on earlier deposit repayments",
-];
-
-const MISSED = [
-  "Circular must be filed with the Registrar at least 30 days before issue",
-  "20% of deposits maturing next financial year held in a deposit repayment reserve account",
-];
-
-const CHEATSHEET_ROWS = [
-  { h: "Measurement", b: "Lower of cost and net realisable value." },
+const STEPS = [
   {
-    h: "Cost includes",
-    b: "Purchase price, non-recoverable duties and taxes, freight inwards and conversion costs. Excludes abnormal waste, storage (unless necessary) and selling costs.",
+    emoji: "📤",
+    title: "Upload a chapter",
+    body: "A PDF, or photos of your notes, up to 10 MB. Prepzo splits it into topics and matches each one to its paper.",
   },
-  { h: "Cost formulas", b: "FIFO or weighted average. LIFO is not permitted." },
   {
-    h: "Net realisable value",
-    b: "Estimated selling price less the estimated costs of completion and the costs necessary to make the sale.",
+    emoji: "🎯",
+    title: "Choose what to make",
+    body: "Pick the topics and how many questions or flashcards you want. They come out in your paper’s format, with explanations and model answers.",
+  },
+  {
+    emoji: "✍️",
+    title: "Practise and get marked",
+    body: "Answer MCQs, write descriptive answers (typed or photographed), and see exactly where the marks went.",
   },
 ];
 
-const PAPER_SUBQUESTIONS = [
-  "(a) Compute the value of closing inventory as per AS 2.",
-  "(b) State the accounting treatment of the resulting write-down.",
+const FEATURES = [
+  {
+    eyebrow: "Answer marking",
+    title: "Write it like the exam hall. Get it marked point by point.",
+    body: "Type your answer, or photograph your handwritten sheets — up to six pages. Prepzo reads them, compares your answer with a model answer and its mark allocation, and shows what earned marks, what you missed, and how to present it better.",
+    note: "Marks are an AI estimate to guide your practice, not an examiner’s verdict.",
+    sample: <DescriptiveSample compact />,
+  },
+  {
+    eyebrow: "Past & mock papers",
+    title: "Practise on the real paper, not a lookalike.",
+    body: "Upload a past or mock paper you already have. Prepzo copies the questions word for word — tables and sub-parts included — and keeps each case-study passage attached to every question that depends on it. Then attempt it as a mock test, with negative marking where the paper has it.",
+    note: "Prepzo doesn’t ship with question papers. You upload your own.",
+    sample: <RealPaperSample />,
+  },
+  {
+    eyebrow: "AI Teacher",
+    title: "Ask doubts about your notes, not the whole internet.",
+    body: "The AI Teacher reads what you uploaded and answers from it first. Keep a separate chat for each upload, or one general chat across everything you’ve added.",
+    sample: <TutorSample />,
+  },
+  {
+    eyebrow: "Revision order",
+    title: "Wrong answers come back. Right ones wait their turn.",
+    body: "On Pro and Premium, practice sessions are ordered for you. A question you got wrong returns within a day; one you got right comes back after a gap. Flashcards work the same way, and you choose how often you review.",
+    sample: <RecallSample />,
+  },
 ];
 
-const RECALL_CARDS = [
-  { t: "Cost formulas permitted under AS 2", s: "Got it wrong", due: "Again tomorrow", bad: true },
-  { t: "Definition of net realisable value", s: "Correct ×2", due: "In 6 days", bad: false },
-  { t: "Items excluded from cost of inventory", s: "Correct ×4", due: "In 3 weeks", bad: false },
-];
-
-const HOW_IT_WORKS = [
+const NOTES = [
   {
-    title: "Upload your notes",
-    description: "Add a PDF, doc or photo of your CA study notes — or a real past paper — for any subject.",
-    icon: Upload,
+    emoji: "🤖",
+    title: "AI can be wrong",
+    body: "Questions, model answers and marks are generated by AI. Check anything important against ICAI material, especially amounts, rates and section numbers.",
+    tone: "border-[#FDE68A] bg-[#FFFBEB]",
   },
   {
-    title: "Get questions & cards",
-    description: "Prepzo reads the file and generates exam-style MCQs, descriptive questions, flashcards and a cheatsheet from it.",
-    icon: Sparkles,
+    emoji: "🔒",
+    title: "Your uploads stay yours",
+    body: "Other students can’t see your files, answers or scores. Delete any upload, or your whole account, whenever you like.",
+    tone: "border-[#BFDBFE] bg-[#F8FAFF]",
   },
   {
-    title: "Revise on autopilot",
-    description: "Practice with automatic spaced repetition. Cards and weak areas resurface right before you forget them, cementing long-term recall.",
-    icon: Repeat2,
+    emoji: "🏛️",
+    title: "Not affiliated with ICAI",
+    body: "Prepzo is an independent study tool. It works from the material you give it and doesn’t come with ICAI study material or papers.",
+    tone: "border-[#E2E8F0] bg-white",
   },
 ];
 
-interface PaperInfo {
-  name: string;
-  tag: string;
-}
-
-interface LevelGroup {
-  name: string;
-  papers: PaperInfo[];
-}
-
-interface LevelConfig {
-  level: string;
-  meta: string;
-  badge: string;
-  groups?: LevelGroup[];
-  papers?: PaperInfo[];
-}
-
-const LEVELS: LevelConfig[] = [
+const FAQS = [
   {
-    level: "Foundation",
-    meta: "4 papers · 400 marks · ICAI Entry Level",
-    badge: "4 Papers",
-    papers: [
-      { name: "Paper 1: Accounting", tag: "Descriptive · 100 Marks" },
-      { name: "Paper 2: Business Laws", tag: "Descriptive · 100 Marks" },
-      { name: "Paper 3: Quantitative Aptitude", tag: "Objective (MCQ) · Negative Marking" },
-      { name: "Paper 4: Business Economics", tag: "Objective (MCQ) · Negative Marking" },
-    ],
+    q: "What exactly does Prepzo do?",
+    a: "You upload your CA study notes or a question paper. Prepzo turns notes into MCQs, descriptive questions, flashcards and cheatsheets; turns papers into mock tests; marks your written answers; and has an AI Teacher you can ask about your notes.",
   },
   {
-    level: "Intermediate",
-    meta: "6 papers · 2 groups · 600 marks",
-    badge: "6 Papers · 2 Groups",
-    groups: [
-      {
-        name: "Group 1",
-        papers: [
-          { name: "Paper 1: Advanced Accounting", tag: "30% MCQ + 70% Descriptive" },
-          { name: "Paper 2: Corporate and Other Laws", tag: "30% MCQ + 70% Descriptive" },
-          { name: "Paper 3: Taxation (DT & GST)", tag: "30% MCQ + 70% Descriptive" },
-        ],
-      },
-      {
-        name: "Group 2",
-        papers: [
-          { name: "Paper 4: Cost & Management Accounting", tag: "100% Practical & Descriptive" },
-          { name: "Paper 5: Auditing and Ethics", tag: "30% MCQ + 70% Descriptive" },
-          { name: "Paper 6: FM & Strategic Management", tag: "30% MCQ + 70% Descriptive" },
-        ],
-      },
-    ],
+    q: "What can I upload?",
+    a: "PDFs and images (JPG, PNG or WEBP) up to 10 MB each — typed notes, handwritten notes, or a past or mock paper you have. Word files aren’t supported yet, so save them as PDF first.",
   },
   {
-    level: "Final",
-    meta: "6 papers · 2 groups · Advanced Tier",
-    badge: "6 Papers · 2 Groups",
-    groups: [
-      {
-        name: "Group 1",
-        papers: [
-          { name: "Paper 1: Financial Reporting", tag: "Case Study & Ind AS Practical" },
-          { name: "Paper 2: Advanced Financial Management", tag: "Valuation & Strategy" },
-          { name: "Paper 3: Advanced Auditing & Ethics", tag: "Integrated ICAI Standards" },
-        ],
-      },
-      {
-        name: "Group 2",
-        papers: [
-          { name: "Paper 4: Direct Tax & Int'l Tax", tag: "Case Laws & Assessment" },
-          { name: "Paper 5: Indirect Tax Laws", tag: "GST & Customs Analysis" },
-          { name: "Paper 6: Integrated Business Solutions", tag: "Multi-Disciplinary Case Studies" },
-        ],
-      },
-    ],
+    q: "Does it come with ICAI past papers or study material?",
+    a: "No. Prepzo works only from what you upload. If you have a past or mock paper, upload it and Prepzo turns it into a mock test.",
+  },
+  {
+    q: "Can I write answers by hand?",
+    a: "Yes. Photograph up to six pages of a handwritten answer. Prepzo reads your writing first, and if any part is blurry or unclear it shows you what it read so you can correct it before marking.",
+  },
+  {
+    q: "How accurate is the marking?",
+    a: "It’s an estimate. Your answer is compared with a model answer and its mark allocation, and both are AI-generated unless your uploaded paper included solutions. Use the feedback to see what to fix, not as a prediction of your exam result.",
+  },
+  {
+    q: "Is the free plan really free?",
+    a: "Yes, and you don’t need a card to sign up. It lets you try uploads, questions, flashcards, answer marking, a mock test and the AI Teacher, with small limits. Study history, PDF cheatsheets and review ordering come with Pro and Premium. The pricing table above shows the exact limits.",
+  },
+  {
+    q: "Who can see my notes?",
+    a: "Only you. Other students can’t see your files, answers or scores. To generate content, your uploads are processed by Google’s Gemini AI.",
+  },
+  {
+    q: "How do paid plans renew and cancel?",
+    a: "Paid plans renew automatically each billing cycle until you cancel. You can cancel from the pricing page at any time and keep your plan until the end of the period you’ve paid for.",
+  },
+  {
+    q: "Which languages does it support?",
+    a: "English only, for now.",
   },
 ];

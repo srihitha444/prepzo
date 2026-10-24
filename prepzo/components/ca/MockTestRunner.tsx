@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, RotateCcw } from "lucide-react";
-import toast from "react-hot-toast";
 import type { CaPaper } from "@/lib/ca-syllabus";
 import { useCaMockTest } from "@/hooks/useCaMockTest";
 import { DescriptiveAnswerForm, EvaluationResult } from "@/components/ca/PracticeExplorer";
@@ -62,21 +61,34 @@ function TestRunner({
 
   if (test.submitted && test.result) {
     return (
-      <div className="mt-6 rounded-2xl bg-[#1E3A8A] p-6 text-center text-white shadow-[var(--shadow-card)]">
-        <p className="font-[family-name:var(--font-fraunces)] text-2xl font-bold">
-          {test.result.totalScore}/{test.result.totalPossible}
-        </p>
-        <p className="mt-1 text-sm text-white/70">
-          MCQ: {test.result.mcqScore} · Descriptive: {test.result.descriptiveScore}
-        </p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button onClick={test.restart} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF]">
-            <RotateCcw size={15} /> Retake
-          </button>
-          <button onClick={onExit} className="rounded-xl border border-white/25 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10">
-            Done
-          </button>
+      <div className="mt-6 space-y-4">
+        <div className="rounded-2xl bg-[#1E3A8A] p-6 text-center text-white shadow-[var(--shadow-card)]">
+          <p className="font-[family-name:var(--font-fraunces)] text-2xl font-bold">
+            {test.result.totalScore}/{test.result.totalPossible}
+          </p>
+          <p className="mt-1 text-sm text-white/70">
+            MCQ: {test.result.mcqScore} · Descriptive: {test.result.descriptiveScore}
+          </p>
+          <div className="mt-5 flex justify-center gap-3">
+            <button onClick={test.restart} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#1E3A8A] hover:bg-[#F8FAFF]">
+              <RotateCcw size={15} /> Retake
+            </button>
+            <button onClick={onExit} className="rounded-xl border border-white/25 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10">
+              Done
+            </button>
+          </div>
         </div>
+        {test.questions.filter((question) => question.question_type === "descriptive" && test.descriptiveAnswers[question.id]?.evaluation).map((question) => {
+          const answer = test.descriptiveAnswers[question.id];
+          return (
+            <div key={question.id} className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-[var(--shadow-card)]">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">Question review</p>
+              <QuestionText text={question.question_text} className="text-sm font-medium leading-relaxed text-[#0F172A]" />
+              {answer?.text && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[#F8FAFF] p-3 text-xs text-[#334155]">{answer.text}</p>}
+              {answer?.evaluation && <EvaluationResult evaluation={answer.evaluation} />}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -167,13 +179,9 @@ function TestRunner({
             ) : (
               <DescriptiveAnswerForm
                 key={q.id}
-                onSubmit={async (text) => {
-                  try {
-                    await test.submitDescriptive(q, text);
-                  } catch (error) {
-                    toast.error(error instanceof Error ? error.message : "Evaluation failed");
-                  }
-                }}
+                onSubmit={(text, files, confirmedAnswer, uploadedImages) =>
+                  test.submitDescriptive(q, text, files, confirmedAnswer, uploadedImages)
+                }
                 evaluating={Boolean(descriptiveAnswer?.evaluating)}
               />
             )}

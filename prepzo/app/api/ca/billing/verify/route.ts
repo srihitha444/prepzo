@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const service = await createServiceClient();
     const { data: subscription } = await service
       .from("ca_subscriptions")
-      .select("id, user_id, plan, billing_cycle, status")
+      .select("id, user_id, plan, billing_cycle, status, referral_code_id")
       .eq("razorpay_subscription_id", subscriptionId)
       .maybeSingle();
 
@@ -61,6 +61,11 @@ export async function POST(request: Request) {
 
     if (subscription.status === "active") {
       return NextResponse.json({ success: true, plan: subscription.plan, already_active: true });
+    }
+
+    if (subscription.referral_code_id) {
+      await service.from("ca_subscriptions").update({ mandate_authorized: true, updated_at: new Date().toISOString() }).eq("id", subscription.id);
+      return NextResponse.json({ success: true, plan: subscription.plan, referral_payment_required: true });
     }
 
     const start = new Date();

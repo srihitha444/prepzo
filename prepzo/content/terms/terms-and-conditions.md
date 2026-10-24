@@ -1,6 +1,6 @@
 ## TERMS AND CONDITIONS
 
-Last updated: 2026-09-24
+Last updated: 2026-10-24
 
 IMPORTANT: Sections 4 to 8 set out how paid subscriptions work, including that
 paid plans RENEW AUTOMATICALLY until you cancel them, how to cancel, and when
@@ -21,8 +21,11 @@ collect, safeguard and disclose information that results from your use of our
 web pages.
 
 Your agreement with us includes these Terms and our Privacy Policy
-("Agreements"). You acknowledge that you have read and understood the
-Agreements and agree to be bound by them.
+("Agreements"). You accept the Agreements by ticking the acceptance box when
+you create your account (or, if you have not done so before, when you first
+subscribe to a paid plan). We record the date and the version of the Terms you
+accepted. You acknowledge that you have read and understood the Agreements and
+agree to be bound by them.
 
 If you do not agree with (or cannot comply with) the Agreements, you may not
 use Service, but please let us know by emailing support@prepzo.study so we can
@@ -58,10 +61,14 @@ Service is offered on a free plan and on paid subscription plans. The plans,
 their current prices and the limits that apply to each are shown on our pricing
 page at https://www.prepzo.study/pricing, which forms part of these Terms.
 
-As at the date above, the paid plans are:
+As at the date above, the paid plans and billing cycles are:
 
-  Pro      Rs. 129 per month, or Rs. 1,199 per year
-  Premium  Rs. 299 per month, or Rs. 2,799 per year
+             Monthly    3 months    6 months    12 months
+  Pro        Rs. 149    Rs. 399     Rs. 749     Rs. 1,399
+  Premium    Rs. 299    Rs. 799     Rs. 1,499   Rs. 2,799
+
+The price for a 3-, 6- or 12-month cycle is charged in full at the start of
+each cycle.
 
 All prices are in Indian Rupees and are inclusive of applicable taxes. Where a
 tax invoice is required, it will be issued to the account holder's registered
@@ -72,6 +79,23 @@ period you have already paid for. If we change the price applying to your
 renewal, we will notify you by email at least fourteen (14) days before the
 renewal date, so that you can cancel before the new price takes effect.
 
+  4.1. Referral codes. We may issue referral codes to individuals who
+  recommend Service. If you enter a valid referral code when you subscribe to a
+  paid plan, the first payment for that subscription is reduced by ten per cent
+  (10%) of one month's price of the plan you choose, whichever billing cycle
+  you select. The discount applies to that first payment only; every renewal is
+  charged at the regular price for your plan and billing cycle.
+
+  4.2. A referral code can be used only once per email address, cannot be used
+  by the person to whom it was issued, cannot be combined with any other
+  discount, has no cash value, and can be used only while it is active and
+  before its expiry date. We may withdraw a code, or decline to apply it, where
+  we reasonably believe it is being misused.
+
+  4.3. The person who issued a referral code may receive a commission from us
+  based on payments made by subscribers who used it. That commission is paid
+  by us and does not increase the price you pay.
+
 5. Automatic Renewal
 
 PAID PLANS RENEW AUTOMATICALLY.
@@ -81,7 +105,13 @@ to charge your selected payment method on a recurring basis:
 
   5.1. A monthly plan renews every month, on the same date, until cancelled.
 
-  5.2. An annual plan renews every year, on the same date, until cancelled.
+  5.2. A 3-month plan renews every three months, and a 6-month plan every six
+  months, on the same date, until cancelled.
+
+  5.3. A 12-month plan renews every year, on the same date, until cancelled.
+
+  5.4. Where you used a referral code under section 4.1, the first renewal
+  falls one full billing cycle after your discounted first payment.
 
 Each renewal is charged at the price then applying to your plan and billing
 cycle, as notified under section 4. Renewal continues until you cancel under
@@ -173,7 +203,8 @@ it. We may contact you to discuss your usage before applying any restriction.
 9. Your Uploads
 
 Service allows you to upload your own study material, including notes,
-documents, images and past or mock examination papers ("Your Uploads").
+documents, images and past or mock examination papers, and photographs of your
+own handwritten answers submitted for evaluation ("Your Uploads").
 
 You retain ownership of Your Uploads. You grant us a limited, non-exclusive,
 royalty-free licence to store, process and analyse Your Uploads in order to
@@ -238,7 +269,9 @@ answer evaluations from them.
   result in termination of your account under section 22.
 
   9.7. You may delete Your Uploads at any time from within Service. Deleting an
-  upload also retires the content generated from it in your account.
+  upload also retires the content generated from it in your account. Deleting
+  your account deletes all of Your Uploads, including photographs of your
+  answers.
 
 10. AI-Generated Content
 
@@ -342,8 +375,8 @@ and that the information you give is accurate.
 
 14. Analytics
 
-We may use third-party service providers to monitor and analyse the use of
-Service. See our Privacy Policy for details.
+We use Google Analytics, loaded through Google Tag Manager, to understand how
+Service is used. See our Privacy Policy for details.
 
 15. No Use By Minors
 

@@ -259,6 +259,8 @@ create policy "users_manage_own_question_attempts"
 
 create index if not exists idx_question_attempts_user on question_attempts(user_id);
 create index if not exists idx_question_attempts_question on question_attempts(question_id);
+alter table question_attempts add column if not exists answer_images text[] not null default '{}';
+create index if not exists idx_question_attempts_answer_images on question_attempts using gin(answer_images);
 
 -- ============================================================
 -- AI TEACHER SESSIONS
@@ -491,8 +493,35 @@ create index if not exists idx_cheatsheets_user on ca_cheatsheets(user_id);
 create index if not exists idx_cheatsheets_note on ca_cheatsheets(note_id);
 
 -- ============================================================================
+-- PRIVATE HANDWRITTEN ANSWER UPLOADS
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('ca-answer-images', 'ca-answer-images', false, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "ca_answer_images_owner_insert" on storage.objects;
+create policy "ca_answer_images_owner_insert"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'ca-answer-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "ca_answer_images_owner_select" on storage.objects;
+create policy "ca_answer_images_owner_select"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'ca-answer-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "ca_answer_images_owner_delete" on storage.objects;
+create policy "ca_answer_images_owner_delete"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'ca-answer-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "ca_answer_images_service_all" on storage.objects;
+create policy "ca_answer_images_service_all"
+  on storage.objects for all to service_role
+  using (bucket_id = 'ca-answer-images')
+  with check (bucket_id = 'ca-answer-images');
+
 -- DONE. Verify: Table Editor should now show user_notes, processing_queue,
 -- flashcard_sessions, question_attempts, ai_teacher_sessions,
 -- ca_mock_test_attempts, ca_test_papers, ca_cheatsheets. Storage should show
--- ca-notes and ca-test-papers buckets.
+-- ca-notes, ca-test-papers, and ca-answer-images buckets.
 -- ============================================================================

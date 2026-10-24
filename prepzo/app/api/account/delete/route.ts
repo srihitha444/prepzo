@@ -9,7 +9,7 @@ import { getRequestUser } from "@/lib/supabase/api-auth";
 // — see supabase/schema.sql), so no manual per-table deletion is needed.
 // Storage isn't part of that FK graph, so the user's files in the two
 // user-scoped buckets are cleaned up separately, best-effort.
-const USER_SCOPED_BUCKETS = ["ca-notes", "ca-test-papers"];
+const USER_SCOPED_BUCKETS = ["ca-notes", "ca-test-papers", "ca-answer-images"];
 
 export async function POST(request: Request) {
   try {

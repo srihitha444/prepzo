@@ -2,6 +2,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { PricingTable } from "@/components/ca/PricingTable";
 import { resolvePlan } from "@/lib/ca/usage";
+import { hasAcceptedTerms } from "@/lib/ca/referrals";
 
 export const metadata = {
   title: "Plans & Pricing | Prepzo",
@@ -56,6 +57,7 @@ export default async function PricingPage() {
           subscription={sub ? { renewsOn: sub.current_period_end, cancelRequested: Boolean(sub.cancel_requested_at) } : null}
           userEmail={user?.email}
           userName={profile?.full_name ?? undefined}
+          needsTerms={user ? !hasAcceptedTerms(user) : false}
         />
       </div>
     </div>

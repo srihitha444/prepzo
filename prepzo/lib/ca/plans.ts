@@ -18,7 +18,7 @@ export type CaPlan = "free" | "pro" | "premium";
  * about an auto-renewing charge can be answered with the exact text the
  * student saw.
  */
-export const TERMS_VERSION = "2026-09-24";
+export const TERMS_VERSION = "2026-10-24";
 export type BillingCycle = "monthly" | "quarterly" | "half_yearly" | "yearly";
 
 /**

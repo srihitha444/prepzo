@@ -16,7 +16,7 @@ import type { BillingCycle } from "@/lib/ca/plans";
  * parsed JSON would change the bytes and break the HMAC.
  *
  * Configure against RAZORPAY_WEBHOOK_SECRET, subscribed to:
- *   subscription.charged, subscription.halted,
+ *   payment.captured, subscription.charged, subscription.halted,
  *   subscription.cancelled, subscription.completed
  */
 export async function POST(request: Request) {
@@ -33,9 +33,62 @@ export async function POST(request: Request) {
       event?: string;
       payload?: {
         subscription?: { entity?: { id?: string; status?: string } };
-        payment?: { entity?: { id?: string } };
+        payment?: { entity?: { id?: string; order_id?: string; amount?: number } };
       };
     };
+
+    const service = await createServiceClient();
+    const now = new Date();
+
+    if (event.event === "payment.captured") {
+      const payment = event.payload?.payment?.entity;
+      if (payment?.order_id && payment.id) {
+        const { data: referredSub } = await service.from("ca_subscriptions")
+          .select("id, user_id, plan, billing_cycle, status, referral_code_id, referral_email, original_first_amount, discount_amount, referral_commission_percent, mandate_authorized")
+          .eq("first_payment_order_id", payment.order_id).maybeSingle();
+        if (referredSub?.referral_code_id && referredSub.mandate_authorized && referredSub.referral_email) {
+          const { data: code } = await service.from("ca_referral_codes").select("user_id").eq("id", referredSub.referral_code_id).maybeSingle();
+          if (!code) throw new Error("Referral code missing for a captured first payment");
+          const email = referredSub.referral_email.toLowerCase();
+          const { data: existingReferral } = await service.from("ca_referrals").select("id, code_id").eq("referred_email", email).maybeSingle();
+          if (existingReferral && existingReferral.code_id !== referredSub.referral_code_id) {
+            throw new Error("Email already redeemed another referral code");
+          }
+          let referralId = existingReferral?.id as string | undefined;
+          if (!referralId) {
+            const commissionEndsAt = new Date(now);
+            commissionEndsAt.setUTCMonth(commissionEndsAt.getUTCMonth() + 12);
+            const { data: referral, error: referralError } = await service.from("ca_referrals").insert({
+              code_id: referredSub.referral_code_id, referrer_user_id: code.user_id,
+              referred_user_id: referredSub.user_id, referred_email: email,
+              ca_subscription_id: referredSub.id, status: "active", activated_at: now.toISOString(),
+              commission_ends_at: commissionEndsAt.toISOString(),
+            }).select("id").single();
+            if (referralError) throw referralError;
+            referralId = referral.id;
+          }
+          const commission = Math.round(Number(referredSub.original_first_amount) * Number(referredSub.referral_commission_percent) / 100);
+          const { error: rewardError } = await service.from("ca_referral_rewards").upsert({
+            referral_id: referralId, referrer_user_id: code.user_id, referred_user_id: referredSub.user_id,
+            ca_subscription_id: referredSub.id,
+            amount_paid: Number(referredSub.original_first_amount) - Number(referredSub.discount_amount),
+            razorpay_payment_id: payment.id,
+            commission_amount: commission, commission_percent: referredSub.referral_commission_percent, status: "pending",
+          }, { onConflict: "razorpay_payment_id", ignoreDuplicates: true });
+          if (rewardError) throw rewardError;
+          if (referredSub.status !== "active") {
+            const end = periodEnd(referredSub.billing_cycle as BillingCycle, now);
+            const { error: activateError } = await service.from("ca_subscriptions").update({
+              status: "active", first_payment_id: payment.id, current_period_start: now.toISOString(),
+              current_period_end: end.toISOString(), updated_at: now.toISOString(),
+            }).eq("id", referredSub.id);
+            if (activateError) throw activateError;
+            await service.from("profiles").update({ plan: referredSub.plan }).eq("id", referredSub.user_id);
+          }
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
 
     const subscriptionId = event.payload?.subscription?.entity?.id;
     if (!subscriptionId) {
@@ -43,7 +96,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
-    const service = await createServiceClient();
     const { data: subscription } = await service
       .from("ca_subscriptions")
       .select("id, user_id, plan, billing_cycle, status, current_period_end")
@@ -53,8 +105,6 @@ export async function POST(request: Request) {
     if (!subscription) {
       return NextResponse.json({ received: true });
     }
-
-    const now = new Date();
 
     switch (event.event) {
       case "subscription.charged": {
@@ -79,6 +129,26 @@ export async function POST(request: Request) {
           .eq("id", subscription.id);
 
         await service.from("profiles").update({ plan: subscription.plan }).eq("id", subscription.user_id);
+
+        const charge = event.payload?.payment?.entity;
+        if (charge?.id && charge.amount) {
+          const { data: referral } = await service.from("ca_referrals")
+            .select("id, code_id, referrer_user_id, referred_user_id, commission_ends_at")
+            .eq("ca_subscription_id", subscription.id).maybeSingle();
+          if (referral?.commission_ends_at && new Date(referral.commission_ends_at) > now) {
+            const { data: code } = await service.from("ca_referral_codes").select("commission_percent").eq("id", referral.code_id).maybeSingle();
+            if (code) {
+              const commission = Math.round(Number(charge.amount) * Number(code.commission_percent) / 100);
+              const { error: rewardError } = await service.from("ca_referral_rewards").upsert({
+                referral_id: referral.id, referrer_user_id: referral.referrer_user_id,
+                referred_user_id: referral.referred_user_id, ca_subscription_id: subscription.id,
+                razorpay_payment_id: charge.id, amount_paid: charge.amount, commission_amount: commission,
+                commission_percent: code.commission_percent, status: "pending",
+              }, { onConflict: "razorpay_payment_id", ignoreDuplicates: true });
+              if (rewardError) throw rewardError;
+            }
+          }
+        }
         break;
       }
 
